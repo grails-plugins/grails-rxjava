@@ -19,6 +19,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.context.request.RequestContextHolder
 import rx.Subscriber
 
+import javax.servlet.AsyncEvent
+import javax.servlet.AsyncListener
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -30,7 +32,7 @@ import javax.servlet.http.HttpServletResponse
  */
 @CompileStatic
 @Slf4j
-class RxResultSubscriber extends Subscriber {
+class RxResultSubscriber extends Subscriber implements AsyncListener {
     /**
      * The Async context
      */
@@ -74,6 +76,7 @@ class RxResultSubscriber extends Subscriber {
         this.controllerClass = controllerClass
         this.controller = controller
         this.linkGenerator = linkGenerator
+        this.asyncContext.addListener(this)
     }
 
     @Override
@@ -185,5 +188,31 @@ class RxResultSubscriber extends Subscriber {
                 asyncContext.complete()
             }
         }
+    }
+
+    @Override
+    void onComplete(AsyncEvent event) throws IOException {
+        if(!isUnsubscribed()) {
+            unsubscribe()
+        }
+    }
+
+    @Override
+    void onTimeout(AsyncEvent event) throws IOException {
+        if(!isUnsubscribed()) {
+            unsubscribe()
+        }
+    }
+
+    @Override
+    void onError(AsyncEvent event) throws IOException {
+        if(!isUnsubscribed()) {
+            unsubscribe()
+        }
+    }
+
+    @Override
+    void onStartAsync(AsyncEvent event) throws IOException {
+        // no-op
     }
 }
