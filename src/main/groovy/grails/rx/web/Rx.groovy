@@ -11,9 +11,7 @@ import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
 import rx.Observable
-import rx.Observer
 import rx.Subscriber
-import rx.observables.AsyncOnSubscribe
 
 import javax.servlet.http.HttpServletRequest
 
@@ -205,6 +203,29 @@ class Rx {
         } as Observable.OnSubscribe<Object>)
     }
 
+    /**
+     * Executes a forward
+     *
+     * @param argMap The forward arguments
+     */
+    static RxResult<Map> forward(Map argMap) {
+        new ForwardResult(argMap)
+    }
+
+    /**
+     * @throws CannotRedirectException Redirects are not possible in asynchronous requests
+     */
+    static void redirect(Map argMap) {
+        throw new CannotRedirectException("Cannot redirect in an asynchronous response. Use forward insead")
+    }
+
+    /**
+     * @throws CannotRedirectException Redirects are not possible in asynchronous requests
+     */
+    static void redirect(Object arg) {
+        throw new CannotRedirectException("Cannot redirect in an asynchronous response. Use forward insead")
+    }
+
     private static List convertToListIfCharSequence(value) {
         List result = null
         if(value instanceof CharSequence) {
@@ -214,20 +235,5 @@ class Rx {
             result = (List)value
         }
         return result
-    }
-    /**
-     * Executes a forward
-     *
-     * @param argMap The forward arguments
-     */
-    static RxResult<Map> forward(Map argMap) {
-        new ForwardResult(argMap)
-    }
-    static void redirect(Map argMap) {
-        throw new CannotRedirectException("Cannot redirect in an asynchronous response. Use forward insead")
-    }
-
-    static void redirect(Object arg) {
-        throw new CannotRedirectException("Cannot redirect in an asynchronous response. Use forward insead")
     }
 }
