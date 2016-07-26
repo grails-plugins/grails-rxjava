@@ -1,0 +1,22 @@
+= RxJava for Grails
+:author: Graeme Rocher
+:email: graeme@grails.org
+:source-highlighter: coderay
+:numbered:
+:imagesdir: ./images
+
+
+[[introduction]]
+== Introduction
+
+include::introduction.adoc[]
+
+[[gettingStarted]]
+== Getting Started
+
+include::gettingStarted.adoc[]
+
+[[rxControllers]]
+== Using RxGORM with Controllers
+
+include::rxControllers.adoc[]

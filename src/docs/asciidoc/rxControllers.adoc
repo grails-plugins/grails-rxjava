@@ -1,0 +1,150 @@
+The RxJava plugin for Grails itself has no knowledge of RxGORM, it simply provides an API to help compose controllers responses from `rx.Observable` objects.
+
+The link:groovydoc/grails/rx/web/Rx.html[grails.rx.web.Rx] class provides static methods for mapping observables to Grails responses.
+
+To use the class you can add a static import to any controller:
+
+[source,groovy]
+----
+import static grails.rx.web.Rx.*
+import static rx.Observable.*
+----
+
+As you can see typically you also statically import the `rx.Observable` factory methods.
+
+Generally when writing controllers that work with RxJava you must return an `rx.Observable` from the controller.
+
+The RxJava plugin for Grails will then automatically create an asynchronous, non-blocking request that subscribes the `rx.Observable` and processes the emitted results.
+
+When working with RxGORM this means that it is possible to write simple logic that returns an observable. For example:
+
+[source,groovy]
+----
+def show() {
+    Book.get(params.id?.toString())
+}
+----
+
+The above example uses the RxGORM http://gorm.grails.org/6.0.x/rx/api/grails/gorm/rx/RxEntity.html#get(java.io.Serializable,%20java.util.Map)[get(id)] method that returns an `rx.Observable`.
+
+The framework will subscribe to the `rx.Observable` and if it returns a result will automatically call the `respond` method.
+
+This the the most simple case and doesn't require using any of methods of the `grails.rx.web.Rx` class.
+
+However, you may want to customize the response and this is where the `grails.rx.web.Rx` comes in. In the following section we will go through some examples of how to use the class to formulate responses.
+
+=== Retrieving an Object Reactively
+
+The following example shows how you can retrieve an entity reactively using RxGORM and the RxJava plugin:
+
+[source,groovy]
+----
+def show() {
+    Book.get(params.id?.toString()) <1>
+            .map { Book book ->
+        respond(book) <2>
+    }
+    .switchIfEmpty( <3>
+        just( Rx.render(status: NOT_FOUND) ) <4>
+    )
+}
+----
+
+<1> First we invoke the RxGORM http://gorm.grails.org/6.0.x/rx/api/grails/gorm/rx/RxEntity.html#get(java.io.Serializable,%20java.util.Map)[get(id)] method which returns an `rx.Observable`
+<2> If the `rx.Observable` emits a result, map it to the link:groovydoc/grails/rx/web/Rx.html#respond(def,%20java.util.Map)[respond] method using the http://reactivex.io/RxJava/javadoc/rx/Observable.html#map(rx.functions.Func1)[Observable.map] method.
+<3> If the `rx.Observable` does not emit a result use the http://reactivex.io/RxJava/javadoc/rx/Observable.html#switchIfEmpty(rx.Observable)[switchIfEmpty] to return a different `rx.Observable`
+<4> The http://reactivex.io/RxJava/javadoc/rx/Observable.html#just(T)[rx.Observable.just(..)] method is used to render a 404 status
+
+What is import to understand is that the closure passed to the `map` method is step <2> does not have access to the web request as it is executed in a completely different thread.
+
+This means that you cannot use the regular `respond` method defined by the controller class and must instead use the `respond` method statically imported from `grails.rx.web.Rx`.
+
+Generally if you try to access any objects related to the request within a closure passed to the methods of an `rx.Observable` this will lead to an exception.
+
+It is therefore important to ensure data you need to obtain from the request, such as parameters and so on, is obtained before hand. For example:
+
+
+[source,groovy]
+----
+def show() {
+    String author = params.author <1>
+    Book.get(params.id?.toString())
+            .map { Book book ->
+        render view:"book", model:[book:book, author:author] <2>
+    }
+}
+----
+
+<1> The `author` parameter is retrieved in the controller action, not in the body of the `map` method
+<2> This allows us to pass the parameter to the model
+
+=== Listing Objects Reactively
+
+Implementing the `index` action to list objects is an interesting example and introduces some important concepts.
+
+Below you can see an example implementation:
+
+[source,groovy]
+----
+def index(Integer max) {
+    params.max = Math.min(max ?: 10, 100)
+    zip( Book.list(params), <1>
+         Book.count() ) { List bookList, Number count -> <2>
+        render view:"index", <3>
+               model:[bookList: bookList, bookCount: count]
+    }
+}
+----
+
+<1> In this case the http://reactivex.io/RxJava/javadoc/rx/Observable.html#zip(rx.Observable,%20rx.Observable,%20rx.functions.Func2)[zip] method returns an `Observable` that combines the list of books and the count of the number of books obtained from the `Book.count()` method, which also returns an `rx.Observable`
+<2> The closure is passed the result of the `zip` method which is the list of books and the count
+<3> Finally, the `Rx.render(..)` method is used to indicate that the `index` view should be rendered with the appropriate model
+
+The critical thing to understand here is the usage of the `zip` method. The `zip` method allows you to combine multiple `rx.Observable` queries and formulate a result from them. The queries are executed asynchronously in a non-blocking manner and the final result passed to the view for rendering.
+
+
+=== Saving Objects Reactively
+
+Saving RxGORM objects presents a different set of challenges. One challenge is you typically need to bind request data to the object in a non-blocking manner.
+
+With this in mind the link:groovydoc/grails/rx/web/Rx.html#bindData(java.lang.Object,%20java.lang.Object,%20java.util.Map,%20java.lang.String)[Rx.bindData(..)] method provides the ability to bind an incoming JSON body to an object.
+
+The `bindData` method returns an `rx.Observable` that emits the object once binding is complete.
+
+The following example is a full implementation of saving an object:
+
+[source,groovy]
+----
+def save() {
+    Rx.bindData(new Book(), request) <1>
+            .switchMap { Book book -> <2>
+        if(book.hasErrors()) {
+            just(
+                respond( book.errors, view:'create') <3>
+            )
+        }
+        else {
+            book.save(flush:true) <4>
+                    .map { Book b ->
+                respond b, [status: CREATED, view:"show"] <5>
+            }
+            .onErrorReturn { Throwable e -> <6>
+                if(e instanceof ValidationException) {
+                    respond e.errors, view:'create'
+                }
+                else {
+                    log.error("Error saving entity: $e.message", e)
+                    return INTERNAL_SERVER_ERROR
+                }
+            }
+        }
+    }
+}
+----
+
+<1> The `bindData` method is used to bind the incoming request to a new object
+<2> The http://reactivex.io/RxJava/javadoc/rx/Observable.html#switchMap(rx.functions.Func1)[switchMap] method is used to return another `rx.Observable` to be processed from the result of the original `bindData` observable.
+<3> If the object has errors then the errors are rendered using the link:groovydoc/grails/rx/web/Rx.html#respond(def,%20java.util.Map)[respond] method.
+<4> Otherwise the object is saved using the RxGORM http://gorm.grails.org/6.0.x/rx/api/grails/gorm/rx/RxEntity.html#save()[save()] method which returns an `rx.Observable`.
+<5> If the object was successfully saved then the `respond` method is used to render the object
+<6> Otherwise if an error occurred it is handled appropriately

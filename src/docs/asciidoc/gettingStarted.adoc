@@ -1,0 +1,28 @@
+To get started you first need to declare a dependency on the RxJava plugin for Grails:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+    ...
+    compile 'org.grails.plugins:rxjava:{version}'
+}
+----
+
+You then may want to include an implementation of RxGORM, for the examples in this documentation we will use RxGORM for MongoDB:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+dependencies {
+    ...
+    compile 'org.grails.plugins:rx-mongodb:6.0.0.M2'
+}
+----
+
+The plugin includes a `generate-rx-controller` command for the Grails command line that can help you generate a controller for a domain class that implements the `RxEntity` trait:
+
+[source,bash]
+----
+$ grails generate-rx-controller example.Book
+----
