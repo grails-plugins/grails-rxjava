@@ -21,6 +21,10 @@ import javax.servlet.AsyncContext
 import javax.servlet.http.HttpServletRequest
 
 /**
+ * An {@link ActionResultTransformer} that transforms return values of type {@link Observable}.
+ *
+ * An asynchronous request is created and the observable subscribed to, allowing non-blocking processing of requests.
+ *
  * @author Graeme Rocher
  * @since 1.0
  */
@@ -34,6 +38,9 @@ class RxResultTransformer implements ActionResultTransformer {
     @Autowired(required = false)
     GrailsExceptionResolver exceptionResolver
 
+    /**
+     * The link generator is required for handling forwarding
+     */
     @Autowired
     LinkGenerator linkGenerator
 
@@ -45,9 +52,11 @@ class RxResultTransformer implements ActionResultTransformer {
             // handle RxJava Observables
             Observable observable = (Observable)actionResult
 
+            // tell Grails not to render the view by convention
             HttpServletRequest request = webRequest.getCurrentRequest()
             webRequest.setRenderView(false)
 
+            // Create the Async web request and register it with the WebAsyncManager so Spring is aware
             WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
 
             AsyncWebRequest asyncWebRequest = new AsyncGrailsWebRequest(
@@ -57,10 +66,12 @@ class RxResultTransformer implements ActionResultTransformer {
 
             asyncManager.setAsyncWebRequest(asyncWebRequest)
 
+            // Start async processing and create the GrailsAsync object
             asyncWebRequest.startAsync()
             request.setAttribute(GrailsApplicationAttributes.ASYNC_STARTED, true)
             GrailsAsyncContext asyncContext = new GrailsAsyncContext(asyncWebRequest.asyncContext, webRequest)
 
+            // in a separate thread register the observable subscriber
             asyncContext.start {
                 RxResultSubscriber subscriber = new RxResultSubscriber(
                         asyncContext,
@@ -73,6 +84,8 @@ class RxResultTransformer implements ActionResultTransformer {
                 subscriber.urlConverter = urlConverter
                 observable.subscribe(subscriber)
             }
+            // return null indicating that the request thread should be returned to the thread pool
+            // async request processing will take over
             return null
         }
         return actionResult

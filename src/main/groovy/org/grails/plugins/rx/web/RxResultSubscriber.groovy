@@ -25,7 +25,14 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 /**
- * Handles results from Observables
+ *  <p>A {@link Subscriber} that processed items emitted from an {@link rx.Observable} and produces
+ *  an appropriate response.</p>
+ *
+ *  <p>If the {@link rx.Observable} emits a {@link RxResult} then processing is delegated to the result with the execute method
+ *  being wrapped in the asynchronous request.</p>
+ *
+ *  <p>Otherwise the current controller's respond method is called with the object emitted from the observable</p>
+ *
  *
  * @author Graeme Rocher
  * @since 6.0
@@ -63,7 +70,6 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     boolean isRender = false
 
-    protected List rxResults = []
     protected RxCompletionStrategy completionStrategy = RxCompletionStrategy.DEFAULT
 
     RxResultSubscriber(GrailsAsyncContext asyncContext,
@@ -82,7 +88,10 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     @Override
     void onNext(Object o) {
         if(o instanceof RxResult) {
+            // if the object emitted is an RxResult handle it accordingly
             if(o instanceof ForwardResult) {
+                // forward results are passed the AsyncContext such that
+                // the forward can call asyncContext.dispatch(..)
                 ForwardResult forwardResult = (ForwardResult)o
                 forwardResult.setLinkGenerator(linkGenerator)
                 forwardResult.setUrlConverter(urlConverter)
@@ -92,6 +101,9 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
                 completionStrategy = RxCompletionStrategy.NONE
             }
             else {
+                // Regular RxResults are wrapped in the asynchronous
+                // request and executed. The completion strategy dictates
+                // what happens next
                 RxResult result = (RxResult) o
                 result.controller = controller
                 withRequest {
@@ -100,16 +112,34 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
             }
         }
         else if(o instanceof HttpStatus) {
+            // if the item emitted is an HttpStatus object set the status
+            // of the response and terminate proccessing
             withRequest {
                 controller.render(status: o)
                 completionStrategy = RxCompletionStrategy.COMPLETE
             }
         }
         else {
-            rxResults.add(o)
+            // Otherwise delegate to the controller respond method
+            withRequest { GrailsWebRequest webRequest ->
+                ((RestResponder)controller).respond((Object)o)
+                def modelAndView = webRequest.getRequest().getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
+                if(modelAndView != null) {
+                    completionStrategy = RxCompletionStrategy.DISPATCH
+                }
+                else {
+                    completionStrategy = RxCompletionStrategy.DEFAULT
+                }
+            }
         }
     }
 
+    /**
+     * Wrap the given closure in asynchronous request processing
+     *
+     * @param callable The closure
+     * @return The return result of the closure
+     */
     public <T> T withRequest(Closure<T> callable) {
         def previousAttributes = RequestContextHolder.getRequestAttributes()
         GrailsWebRequest rxWebRequest = new GrailsWebRequest((HttpServletRequest)asyncContext.request, (HttpServletResponse)asyncContext.response, asyncContext.request.getServletContext())
@@ -128,64 +158,46 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     @Override
     void onCompleted() {
+        // When the observable finishes emitting items
+        // terminate the asynchronous context in the appropriate manner based on the
+        // completion strategy
         switch(completionStrategy) {
             case RxCompletionStrategy.COMPLETE:
                 asyncContext.complete()
-                return
+                break
             case RxCompletionStrategy.DISPATCH:
                 asyncContext.dispatch()
-                return
+                break
             case RxCompletionStrategy.NONE:
-                return
-        }
-
-        GrailsWebRequest rxWebRequest = new GrailsWebRequest((HttpServletRequest)asyncContext.request, (HttpServletResponse)asyncContext.response, asyncContext.request.getServletContext())
-        WebUtils.storeGrailsWebRequest(rxWebRequest)
-
-        try {
-            if(rxResults.isEmpty()) {
-                if(controller instanceof RestResponder) {
-                    ((RestResponder)controller).respond((Object)null)
-                }
-            }
-            else {
-                if(rxResults.size() == 1) {
-                    def first = rxResults.get(0)
-                    ((RestResponder)controller).respond(first)
-                }
-                else {
-                    ((RestResponder)controller).respond(rxResults)
-                }
-            }
-            def modelAndView = rxWebRequest.getRequest().getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
-            if(modelAndView != null && !isRender) {
-                asyncContext.dispatch()
-            }
-            else {
+                // for none, the RxResult will have terminated the asynchronous context so do nothing
+                break
+            default:
                 if(isRender) {
                     asyncContext.response.flushBuffer()
                 }
                 asyncContext.complete()
-            }
-        } finally {
-            rxWebRequest.requestCompleted()
-            WebUtils.clearGrailsWebRequest()
         }
     }
 
     @Override
     void onError(Throwable e) {
         if(!asyncContext.response.isCommitted()) {
+            // if an error occurred and the response has not yet been commited try and handle it
             def httpServletResponse = (HttpServletResponse) asyncContext.response
+            // first check if the exception resolver and resolve a model and view
             if(exceptionResolver != null) {
                 def modelAndView = exceptionResolver.resolveException((HttpServletRequest) asyncContext.request, httpServletResponse, this, (Exception) e)
-                asyncContext.getRequest().setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView);
-                asyncContext.dispatch()
+                if(modelAndView != null) {
+                    asyncContext.getRequest().setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView);
+                    asyncContext.dispatch()
+                }
+                else {
+                    // if the error can't be resolved send the default error
+                    sendDefaultError(e, httpServletResponse)
+                }
             }
             else {
-                log.error("Async Dispatch Error: ${e.message}", e)
-                httpServletResponse.sendError(500, "Async Dispatch Error: ${e.message}")
-                asyncContext.complete()
+                sendDefaultError(e, httpServletResponse)
             }
         }
     }
@@ -214,5 +226,11 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     @Override
     void onStartAsync(AsyncEvent event) throws IOException {
         // no-op
+    }
+
+    protected void sendDefaultError(Throwable e, HttpServletResponse httpServletResponse) {
+        log.error("Async Dispatch Error: ${e.message}", e)
+        httpServletResponse.sendError(500, "Async Dispatch Error: ${e.message}")
+        asyncContext.complete()
     }
 }
