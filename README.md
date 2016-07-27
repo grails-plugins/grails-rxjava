@@ -23,4 +23,4 @@ Where `{version}` is the version of the plugin.
 
 ## Documentation 
 
-For further information see the the [User guide](http://grails-plugins.github.io/grails-rxjava/snapshot/). 
+For further information see the the [User guide](http://grails-plugins.github.io/grails-rxjava/latest/). 
