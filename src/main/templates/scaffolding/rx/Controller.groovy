@@ -35,8 +35,8 @@ class ${className}Controller {
             }
             else {
                 ${propertyName}.save(flush:true)
-                        .map { ${className} b ->
-                    respond b, [status: CREATED, view:"show"]
+                        .map { ${className} saved${className} ->
+                    respond saved${className}, [status: CREATED, view:"show"]
                 }
                 .onErrorReturn { Throwable e ->
                     if(e instanceof ValidationException) {
