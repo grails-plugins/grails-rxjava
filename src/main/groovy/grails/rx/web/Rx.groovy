@@ -1,5 +1,6 @@
 package grails.rx.web
 
+import grails.async.Promises
 import grails.web.databinding.DataBindingUtils
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
@@ -13,6 +14,7 @@ import org.springframework.web.context.request.async.WebAsyncUtils
 import rx.Observable
 import rx.Subscriber
 
+import javax.servlet.ServletInputStream
 import javax.servlet.http.HttpServletRequest
 
 /**
@@ -173,7 +175,7 @@ class Rx {
     static Observable bindData(Object object, Object bindingSource, Map arguments = Collections.emptyMap(), String filter = null) {
         Observable.create( { Subscriber<? super Object> subscriber ->
                 subscriber.onStart()
-                Thread.start {
+                Promises.task {
                     if(bindingSource instanceof HttpServletRequest) {
                         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(bindingSource)
                         // horrible hack, find better solution
@@ -203,6 +205,35 @@ class Rx {
         } as Observable.OnSubscribe<Object>)
     }
 
+    /**
+     * Allows reading the request body in a non-blocking manner
+     *
+     * @param The request
+     *
+     * @return An observable
+     */
+    @CompileDynamic
+    static Observable<InputStream> withBody(HttpServletRequest request) {
+        Observable.create( { Subscriber<InputStream> subscriber ->
+            subscriber.onStart()
+            Promises.task {
+                InputStream inputStream = null
+                try {
+                    try {
+                        inputStream = request.getInputStream()
+                        subscriber.onNext(inputStream)
+                    } catch (Throwable e) {
+                        subscriber.onError(e)
+                    }
+                } finally {
+                    subscriber.onCompleted()
+                    inputStream?.close()
+                }
+
+            }
+        } as Observable.OnSubscribe<InputStream>)
+    }
+    
     /**
      * Executes a forward
      *
