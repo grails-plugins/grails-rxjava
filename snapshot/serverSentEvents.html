@@ -427,35 +427,107 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 <div id="content">
 <div class="paragraph">
-<p>To get started you first need to declare a dependency on the RxJava plugin for Grails:</p>
+<p>You can write controllers that support <a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events">Server Sent Events</a> using the RxJava plugin for Grails.</p>
+</div>
+<div class="paragraph">
+<p>Using the <a href="groovydoc/grails/rx/web/Rx.html#stream(Observable&lt;T&gt;,%20java.lang.Long,%20java.util.concurrent.TimeUnit)">stream</a> method you can return an observable that streams events to the browser.</p>
+</div>
+<div class="paragraph">
+<p>For example:</p>
 </div>
 <div class="listingblock">
-<div class="title">build.gradle</div>
 <div class="content">
-<pre class="highlight"><code class="language-groovy" data-lang="groovy">dependencies {
-    ...
-    compile 'org.grails.plugins:rxjava:1.0.0-SNAPSHOT'
+<pre class="highlight"><code class="language-groovy" data-lang="groovy">def index() {
+    def observable = Observable.create({ Subscriber subscriber -&gt; <i class="conum" data-value="1"></i><b>(1)</b>
+        task { <i class="conum" data-value="2"></i><b>(2)</b>
+            for(i in (0..5)) {
+                if(i % 2 == 0) {
+                    subscriber.onNext(
+                        render("Tick") <i class="conum" data-value="3"></i><b>(3)</b>
+                    )
+                }
+                else {
+                    subscriber.onNext(
+                        render("Tock")
+                    )
+
+                }
+                sleep 1000
+            }
+            subscriber.onCompleted() <i class="conum" data-value="4"></i><b>(4)</b>
+        }
+    } as Observable.OnSubscribe)
+
+    stream observable <i class="conum" data-value="5"></i><b>(5)</b>
 }</code></pre>
 </div>
 </div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Create a new <code>rx.Observable</code></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Use the <code>Promises.task</code> method to process the observable asynchronously</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Emit a new item from the <code>Observable</code> using <code>onNext</code></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Mark the <code>Observable</code> as complete when work is complete</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="5"></i><b>5</b></td>
+<td>Return the <code>Observable</code> from a controller with the <code>stream</code> method</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
-<p>You then may want to include an implementation of RxGORM, for the examples in this documentation we will use RxGORM for MongoDB:</p>
+<p>The above example is a simple example that simulates a process that takes a while using the <code>sleep</code> method, alternating the words "Tick" and "Tock".</p>
+</div>
+<div class="paragraph">
+<p>On the client side you can register a JavaScript function that uses the controller as an event source:</p>
 </div>
 <div class="listingblock">
-<div class="title">build.gradle</div>
 <div class="content">
-<pre class="highlight"><code class="language-groovy" data-lang="groovy">dependencies {
-    ...
-    compile 'org.grails.plugins:rx-mongodb:6.0.0.M2'
+<pre class="highlight"><code class="language-javascript" data-lang="javascript">function tickTock() {
+    var eventSource = new EventSource("ticktock");
+    eventSource.onmessage = function(event) {
+        console.log("data: "+event.data)
+        document.getElementById('message').innerHTML = event.data;
+    };
+
+}
+tickTock()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the above exmple the <code>onmessage</code> handler will be invoked every time the <code>Observable</code> emits an item.</p>
+</div>
+<div class="paragraph">
+<p>If you wish to send a particular named event you can use the name argument of the <code>stream</code> method:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-groovy" data-lang="groovy">stream "ticktock", observable</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And then attach an event listener for only that event on the client:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-javascript" data-lang="javascript">function tickTock() {
+    var eventSource = new EventSource("ticktock");
+    eventSource.addEventListener('ticktock', function(event) {
+        console.log("data: "+event.data)
+        document.getElementById('message').innerHTML = event.data;
+    }, false);
 }</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The plugin includes a <code>generate-rx-controller</code> command for the Grails command line that can help you generate a controller for a domain class that implements the <code>RxEntity</code> trait:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-bash" data-lang="bash">$ grails generate-rx-controller example.Book</code></pre>
 </div>
 </div>
 </div>
