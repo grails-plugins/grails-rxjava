@@ -21,6 +21,7 @@ import rx.Subscriber
 
 import javax.servlet.AsyncEvent
 import javax.servlet.AsyncListener
+import javax.servlet.ServletResponse
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -43,6 +44,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     /**
      * The Async context
      */
+    public static final String DATA_PREFIX = "data: "
     final GrailsAsyncContext asyncContext
     /**
      * The exception handler
@@ -68,7 +70,20 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
      */
     UrlConverter urlConverter
 
+    /**
+     * Whether this is a call to render
+     */
     boolean isRender = false
+
+    /**
+     * Whether server end events are being used
+     */
+    boolean serverSendEvents = false
+
+    /**
+     * The server send event name
+     */
+    String serverSendEventName
 
     protected RxCompletionStrategy completionStrategy = RxCompletionStrategy.DEFAULT
 
@@ -106,9 +121,21 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
                 // what happens next
                 RxResult result = (RxResult) o
                 result.controller = controller
+                def response = asyncContext.response
+                def writer = response.writer
+                if(isServerSendEvents()) {
+                    if(serverSendEventName != null) {
+                        writer.println("event: $serverSendEventName")
+                    }
+                    writer.write(DATA_PREFIX)
+                }
                 withRequest {
                     completionStrategy = result.execute()
                 }
+                if(isServerSendEvents()) {
+                    writer.write("\n\n")
+                }
+
             }
         }
         else if(o instanceof HttpStatus) {

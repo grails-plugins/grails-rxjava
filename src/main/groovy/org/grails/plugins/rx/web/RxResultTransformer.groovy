@@ -18,7 +18,9 @@ import org.springframework.web.context.request.async.WebAsyncUtils
 import rx.Observable
 
 import javax.servlet.AsyncContext
+import javax.servlet.ServletResponse
 import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 
 /**
  * An {@link ActionResultTransformer} that transforms return values of type {@link Observable}.
@@ -60,6 +62,8 @@ class RxResultTransformer implements ActionResultTransformer {
 
             // tell Grails not to render the view by convention
             HttpServletRequest request = webRequest.getCurrentRequest()
+            HttpServletResponse response = webRequest.getCurrentResponse()
+
             webRequest.setRenderView(false)
 
             // Create the Async web request and register it with the WebAsyncManager so Spring is aware
@@ -67,7 +71,7 @@ class RxResultTransformer implements ActionResultTransformer {
 
             AsyncWebRequest asyncWebRequest = new AsyncGrailsWebRequest(
                     request,
-                    webRequest.response,
+                    response,
                     webRequest.servletContext)
 
             asyncManager.setAsyncWebRequest(asyncWebRequest)
@@ -76,11 +80,15 @@ class RxResultTransformer implements ActionResultTransformer {
             asyncWebRequest.startAsync()
             request.setAttribute(GrailsApplicationAttributes.ASYNC_STARTED, true)
             GrailsAsyncContext asyncContext = new GrailsAsyncContext(asyncWebRequest.asyncContext, webRequest)
-
+            final boolean isStreaming = observableResult instanceof StreamingObservableResult
             if(observableResult != null) {
                 def timeout = observableResult.timeoutInMillis()
                 if(timeout != null) {
                     asyncContext.setTimeout(timeout)
+                }
+                if(isStreaming) {
+                    response.setContentType("text/event-stream");
+                    response.flushBuffer()
                 }
             }
             // in a separate thread register the observable subscriber
@@ -94,6 +102,10 @@ class RxResultTransformer implements ActionResultTransformer {
                 )
                 subscriber.isRender = isRender
                 subscriber.urlConverter = urlConverter
+                if(isStreaming) {
+                    subscriber.serverSendEvents = true
+                    subscriber.serverSendEventName = ((StreamingObservableResult)observableResult).eventName
+                }
                 observable.subscribe(subscriber)
             }
             // return null indicating that the request thread should be returned to the thread pool

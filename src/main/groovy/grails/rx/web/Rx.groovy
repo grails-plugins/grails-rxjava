@@ -6,6 +6,7 @@ import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.grails.plugins.rx.web.ObservableResult
+import org.grails.plugins.rx.web.StreamingObservableResult
 import org.grails.plugins.rx.web.result.*
 import org.grails.web.converters.Converter
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -247,6 +248,33 @@ class Rx {
      */
     static <T> ObservableResult<T> withTimeout(Observable<T> observable, Long timeout , TimeUnit unit = TimeUnit.MILLISECONDS) {
         return new ObservableResult<T>(observable, timeout, unit)
+    }
+
+    /**
+     * Start a streaming Server-Send event response for the given observable
+     *
+     * @param observable The observable
+     * @param timeout The timeout
+     * @param unit The timeout unit
+     * @return An observable result
+     */
+    static <T> StreamingObservableResult<T> stream(Observable<T> observable, Long timeout = -1, TimeUnit unit = TimeUnit.MILLISECONDS) {
+        return new StreamingObservableResult<T>(observable, timeout, unit)
+    }
+
+    /**
+     * Start a streaming Server-Send event response for the given observable
+     *
+     * @param eventName The event name
+     * @param observable The observable
+     * @param timeout The timeout
+     * @param unit The timeout unit
+     * @return An observable result
+     */
+    static <T> StreamingObservableResult<T> stream(String eventName, Observable<T> observable, Long timeout = -1, TimeUnit unit = TimeUnit.MILLISECONDS) {
+        def streamingObservableResult = new StreamingObservableResult<T>(observable, timeout, unit)
+        streamingObservableResult.eventName = eventName
+        return streamingObservableResult
     }
     /**
      * Executes a forward
