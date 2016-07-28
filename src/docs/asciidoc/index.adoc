@@ -20,3 +20,8 @@ include::gettingStarted.adoc[]
 == Using RxGORM with Controllers
 
 include::rxControllers.adoc[]
+
+[[serverSentEvents]]
+== Server Sent Events
+
+include::serverSentEvents.adoc[]

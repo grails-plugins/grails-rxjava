@@ -1,0 +1,78 @@
+You can write controllers that support https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events[Server Sent Events] using the RxJava plugin for Grails.
+
+Using the link:groovydoc/grails/rx/web/Rx.html#stream(Observable<T>,%20java.lang.Long,%20java.util.concurrent.TimeUnit)[stream] method you can return an observable that streams events to the browser.
+
+For example:
+
+[source,groovy]
+----
+def index() {
+    def observable = Observable.create({ Subscriber subscriber -> <1>
+        task { <2>
+            for(i in (0..5)) {
+                if(i % 2 == 0) {
+                    subscriber.onNext(
+                        render("Tick") <3>
+                    )
+                }
+                else {
+                    subscriber.onNext(
+                        render("Tock")
+                    )
+
+                }
+                sleep 1000
+            }
+            subscriber.onCompleted() <4>
+        }
+    } as Observable.OnSubscribe)
+
+    stream observable <5>
+}
+----
+
+<1> Create a new `rx.Observable`
+<2> Use the `Promises.task` method to process the observable asynchronously
+<3> Emit a new item from the `Observable` using `onNext`
+<4> Mark the `Observable` as complete when work is complete
+<5> Return the `Observable` from a controller with the `stream` method
+
+
+The above example is a simple example that simulates a process that takes a while using the `sleep` method, alternating the words "Tick" and "Tock".
+
+On the client side you can register a JavaScript function that uses the controller as an event source:
+
+[source,javascript]
+----
+function tickTock() {
+    var eventSource = new EventSource("ticktock");
+    eventSource.onmessage = function(event) {
+        console.log("data: "+event.data)
+        document.getElementById('message').innerHTML = event.data;
+    };
+
+}
+tickTock()
+----
+
+In the above exmple the `onmessage` handler will be invoked every time the `Observable` emits an item.
+
+If you wish to send a particular named event you can use the name argument of the `stream` method:
+
+[source,groovy]
+----
+stream "ticktock", observable
+----
+
+And then attach an event listener for only that event on the client:
+
+[source,javascript]
+----
+function tickTock() {
+    var eventSource = new EventSource("ticktock");
+    eventSource.addEventListener('ticktock', function(event) {
+        console.log("data: "+event.data)
+        document.getElementById('message').innerHTML = event.data;
+    }, false);
+}
+----
