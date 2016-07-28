@@ -200,6 +200,10 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
                 sendDefaultError(e, httpServletResponse)
             }
         }
+        else {
+            log.error("Async Dispatch Error: ${e.message}", e)
+            asyncContext.complete()
+        }
     }
 
     @Override
@@ -213,6 +217,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     void onTimeout(AsyncEvent event) throws IOException {
         if(!isUnsubscribed()) {
             unsubscribe()
+            onError(event.throwable)
         }
     }
 
@@ -220,6 +225,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     void onError(AsyncEvent event) throws IOException {
         if(!isUnsubscribed()) {
             unsubscribe()
+            onError(event.throwable)
         }
     }
 

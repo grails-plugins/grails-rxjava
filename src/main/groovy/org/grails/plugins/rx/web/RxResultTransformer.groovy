@@ -48,6 +48,12 @@ class RxResultTransformer implements ActionResultTransformer {
     UrlConverter urlConverter
 
     Object transformActionResult(GrailsWebRequest webRequest, String viewName, Object actionResult, boolean isRender = false) {
+        ObservableResult observableResult = null
+        if(actionResult instanceof ObservableResult) {
+            observableResult = ((ObservableResult)actionResult)
+            actionResult = observableResult.observable
+        }
+
         if(actionResult instanceof Observable) {
             // handle RxJava Observables
             Observable observable = (Observable)actionResult
@@ -71,6 +77,12 @@ class RxResultTransformer implements ActionResultTransformer {
             request.setAttribute(GrailsApplicationAttributes.ASYNC_STARTED, true)
             GrailsAsyncContext asyncContext = new GrailsAsyncContext(asyncWebRequest.asyncContext, webRequest)
 
+            if(observableResult != null) {
+                def timeout = observableResult.timeoutInMillis()
+                if(timeout != null) {
+                    asyncContext.setTimeout(timeout)
+                }
+            }
             // in a separate thread register the observable subscriber
             asyncContext.start {
                 RxResultSubscriber subscriber = new RxResultSubscriber(

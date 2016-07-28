@@ -5,6 +5,7 @@ import grails.web.databinding.DataBindingUtils
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import org.grails.plugins.rx.web.ObservableResult
 import org.grails.plugins.rx.web.result.*
 import org.grails.web.converters.Converter
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -16,6 +17,7 @@ import rx.Subscriber
 
 import javax.servlet.ServletInputStream
 import javax.servlet.http.HttpServletRequest
+import java.util.concurrent.TimeUnit
 
 /**
  * Methods usable with RxJava observable transformations in order to control
@@ -205,15 +207,15 @@ class Rx {
         } as Observable.OnSubscribe<Object>)
     }
 
+
     /**
-     * Allows reading the request body in a non-blocking manner
+     * Creates an observable from the request body
      *
      * @param The request
      *
      * @return An observable
      */
-    @CompileDynamic
-    static Observable<InputStream> withBody(HttpServletRequest request) {
+    static Observable<InputStream> fromBody(HttpServletRequest request) {
         Observable.create( { Subscriber<InputStream> subscriber ->
             subscriber.onStart()
             Promises.task {
@@ -233,7 +235,19 @@ class Rx {
             }
         } as Observable.OnSubscribe<InputStream>)
     }
-    
+
+    /**
+     * Return an observable with the given timeout. In the event the timeout is reached
+     * the containers onTimeout event handler will be invoked and an error response returned
+     *
+     * @param observable The observable
+     * @param timeout The timeout
+     * @param unit The timeout unit
+     * @return An observable result
+     */
+    static <T> ObservableResult<T> withTimeout(Observable<T> observable, Long timeout , TimeUnit unit = TimeUnit.MILLISECONDS) {
+        return new ObservableResult<T>(observable, timeout, unit)
+    }
     /**
      * Executes a forward
      *
