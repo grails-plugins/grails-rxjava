@@ -17,6 +17,7 @@ import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 import org.springframework.http.HttpStatus
 import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.async.WebAsyncUtils
 import rx.Subscriber
 
 import javax.servlet.AsyncEvent
@@ -80,6 +81,8 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
      */
     boolean serverSendEvents = false
 
+    boolean asyncComplete = false
+
     /**
      * The server send event name
      */
@@ -102,6 +105,13 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     @Override
     void onNext(Object o) {
+        if(asyncComplete) {
+            if( !isUnsubscribed() ) {
+                unsubscribe()
+            }
+            return
+        }
+
         if(o instanceof RxResult) {
             // if the object emitted is an RxResult handle it accordingly
             if(o instanceof ForwardResult) {
@@ -135,6 +145,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
                 if(isServerSendEvents()) {
                     writer.write("\n\n")
                 }
+                response.flushBuffer()
 
             }
         }
@@ -208,7 +219,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     @Override
     void onError(Throwable e) {
-        if(!asyncContext.response.isCommitted()) {
+        if(!asyncComplete && !asyncContext.response.isCommitted()) {
             // if an error occurred and the response has not yet been commited try and handle it
             def httpServletResponse = (HttpServletResponse) asyncContext.response
             // first check if the exception resolver and resolve a model and view
@@ -227,14 +238,21 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
                 sendDefaultError(e, httpServletResponse)
             }
         }
-        else {
-            log.error("Async Dispatch Error: ${e.message}", e)
+        else if(!asyncComplete) {
+            if(e != null)  {
+                log.error("Async Dispatch Error: ${e.message}", e)
+            }
+            else {
+                log.debug("Async timeout occurred")
+            }
+            asyncContext.request.removeAttribute(WebAsyncUtils.WEB_ASYNC_MANAGER_ATTRIBUTE)
             asyncContext.complete()
         }
     }
 
     @Override
     void onComplete(AsyncEvent event) throws IOException {
+        asyncComplete = true
         if(!isUnsubscribed()) {
             unsubscribe()
         }
@@ -245,6 +263,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
         if(!isUnsubscribed()) {
             unsubscribe()
             onError(event.throwable)
+            asyncComplete = true
         }
     }
 
@@ -253,6 +272,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
         if(!isUnsubscribed()) {
             unsubscribe()
             onError(event.throwable)
+            asyncComplete = true
         }
     }
 

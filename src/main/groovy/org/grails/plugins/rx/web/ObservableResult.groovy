@@ -10,36 +10,17 @@ import java.util.concurrent.TimeUnit
  * @since 6.0
  */
 @CompileStatic
-class ObservableResult<T> {
+class ObservableResult<T> extends TimeoutResult {
 
     /**
      * The observable
      */
     final Observable<T> observable
 
-    /**
-     * The timeout, null indicates use the default container timeout
-     */
-    final Long timeout
-
-    /**
-     * The time unit
-     */
-    final TimeUnit unit
 
     ObservableResult(Observable<T> observable, Long timeout = null, TimeUnit unit = TimeUnit.MILLISECONDS) {
+        super(timeout, unit)
         this.observable = observable
-        this.timeout = timeout
-        this.unit = unit
     }
 
-    /**
-     * The timeout, null indicates use the default container timeout
-     */
-    Long timeoutInMillis() {
-        if(timeout != null) {
-            return unit.toMillis(timeout)
-        }
-        return null
-    }
 }

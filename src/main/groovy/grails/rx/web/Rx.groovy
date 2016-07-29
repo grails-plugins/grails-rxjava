@@ -5,7 +5,9 @@ import grails.web.databinding.DataBindingUtils
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import org.grails.plugins.rx.web.NewObservableResult
 import org.grails.plugins.rx.web.ObservableResult
+import org.grails.plugins.rx.web.StreamingNewObservableResult
 import org.grails.plugins.rx.web.StreamingObservableResult
 import org.grails.plugins.rx.web.result.*
 import org.grails.web.converters.Converter
@@ -238,7 +240,7 @@ class Rx {
     }
 
     /**
-     * Return an observable with the given timeout. In the event the timeout is reached
+     * Return an observable with the given timeout to be used with the container. In the event the timeout is reached
      * the containers onTimeout event handler will be invoked and an error response returned
      *
      * @param observable The observable
@@ -248,6 +250,33 @@ class Rx {
      */
     static <T> ObservableResult<T> withTimeout(Observable<T> observable, Long timeout , TimeUnit unit = TimeUnit.MILLISECONDS) {
         return new ObservableResult<T>(observable, timeout, unit)
+    }
+
+    /**
+     * Create a new observable result for the given closure. The closure should accept an argument of type rx.Subscriber
+     * @param callable The closure
+     * @return The observable result
+     */
+    static <T> NewObservableResult<T> create(@DelegatesTo(Subscriber) Closure<T> callable) {
+        return new NewObservableResult<T>(callable)
+    }
+
+    /**
+     * Create a new observable result for the given closure. The closure should accept an argument of type rx.Subscriber
+     * @param callable The closure
+     * @return The observable result
+     */
+    static <T> NewObservableResult<T> create(Long timeout, TimeUnit unit, @DelegatesTo(Subscriber) Closure<T> callable) {
+        return new NewObservableResult<T>(callable, timeout, unit)
+    }
+
+    /**
+     * Create a new observable result for the given closure. The closure should accept an argument of type rx.Subscriber
+     * @param callable The closure
+     * @return The observable result
+     */
+    static <T> NewObservableResult<T> create(Long timeout, @DelegatesTo(Subscriber) Closure<T> callable) {
+        return new NewObservableResult<T>(callable, timeout)
     }
 
     /**
@@ -275,6 +304,39 @@ class Rx {
         def streamingObservableResult = new StreamingObservableResult<T>(observable, timeout, unit)
         streamingObservableResult.eventName = eventName
         return streamingObservableResult
+    }
+
+    /**
+     * Start a streaming Server-Send event response for the given closure which is converted to an asynchronous task
+     *
+     * @param timeout The timeout
+     * @param unit The timeout unit
+     * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
+     * @return An observable result
+     */
+    static <T> StreamingNewObservableResult<T> stream(Long timeout, TimeUnit unit, @DelegatesTo(Subscriber) Closure callable) {
+        return new StreamingNewObservableResult<T>(callable, timeout, unit)
+    }
+
+    /**
+     * Start a streaming Server-Send event response for the given closure which is converted to an asynchronous task
+     *
+     * @param timeout The timeout in milliseconds
+     * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
+     * @return An observable result
+     */
+    static <T> StreamingNewObservableResult<T> stream(Long timeout, @DelegatesTo(Subscriber) Closure callable) {
+        return new StreamingNewObservableResult<T>(callable, timeout)
+    }
+
+    /**
+     * Start a streaming Server-Send event response for the given closure which is converted to an asynchronous task
+     *
+     * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
+     * @return An observable result
+     */
+    static <T> StreamingNewObservableResult<T> stream(@DelegatesTo(Subscriber) Closure callable) {
+        return new StreamingNewObservableResult<T>(callable, -1L)
     }
     /**
      * Executes a forward

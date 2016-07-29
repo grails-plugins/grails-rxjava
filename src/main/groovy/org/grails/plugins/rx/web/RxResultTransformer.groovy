@@ -16,6 +16,7 @@ import org.springframework.web.context.request.async.AsyncWebRequest
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
 import rx.Observable
+import rx.Subscriber
 
 import javax.servlet.AsyncContext
 import javax.servlet.ServletResponse
@@ -37,6 +38,7 @@ class RxResultTransformer implements ActionResultTransformer {
     /**
      * For handling exceptions
      */
+    public static final String CONTENT_TYPE_EVENT_STREAM = "text/event-stream"
     @Autowired(required = false)
     GrailsExceptionResolver exceptionResolver
 
@@ -50,19 +52,21 @@ class RxResultTransformer implements ActionResultTransformer {
     UrlConverter urlConverter
 
     Object transformActionResult(GrailsWebRequest webRequest, String viewName, Object actionResult, boolean isRender = false) {
-        ObservableResult observableResult = null
-        if(actionResult instanceof ObservableResult) {
-            observableResult = ((ObservableResult)actionResult)
-            actionResult = observableResult.observable
+        TimeoutResult timeoutResult = null
+        if(actionResult instanceof TimeoutResult) {
+            timeoutResult = ((TimeoutResult)actionResult)
+            if(timeoutResult instanceof ObservableResult) {
+                actionResult = ((ObservableResult)timeoutResult).observable
+            }
         }
 
-        if(actionResult instanceof Observable) {
-            // handle RxJava Observables
-            Observable observable = (Observable)actionResult
 
+        boolean isObservable = actionResult instanceof Observable
+        if(isObservable || (actionResult instanceof NewObservableResult)) {
             // tell Grails not to render the view by convention
             HttpServletRequest request = webRequest.getCurrentRequest()
             HttpServletResponse response = webRequest.getCurrentResponse()
+
 
             webRequest.setRenderView(false)
 
@@ -80,33 +84,52 @@ class RxResultTransformer implements ActionResultTransformer {
             asyncWebRequest.startAsync()
             request.setAttribute(GrailsApplicationAttributes.ASYNC_STARTED, true)
             GrailsAsyncContext asyncContext = new GrailsAsyncContext(asyncWebRequest.asyncContext, webRequest)
-            final boolean isStreaming = observableResult instanceof StreamingObservableResult
-            if(observableResult != null) {
-                def timeout = observableResult.timeoutInMillis()
+            final boolean isStreaming = timeoutResult instanceof StreamingResult
+            if(timeoutResult != null) {
+                def timeout = timeoutResult.timeoutInMillis()
                 if(timeout != null) {
                     asyncContext.setTimeout(timeout)
                 }
                 if(isStreaming) {
-                    response.setContentType("text/event-stream");
+                    response.setContentType(CONTENT_TYPE_EVENT_STREAM);
                     response.flushBuffer()
                 }
             }
-            // in a separate thread register the observable subscriber
-            asyncContext.start {
-                RxResultSubscriber subscriber = new RxResultSubscriber(
-                        asyncContext,
-                        exceptionResolver,
-                        linkGenerator,
-                        webRequest.controllerClass,
-                        (Controller)webRequest.attributes.getController(request)
-                )
-                subscriber.isRender = isRender
-                subscriber.urlConverter = urlConverter
-                if(isStreaming) {
-                    subscriber.serverSendEvents = true
-                    subscriber.serverSendEventName = ((StreamingObservableResult)observableResult).eventName
+
+            RxResultSubscriber subscriber = new RxResultSubscriber(
+                    asyncContext,
+                    exceptionResolver,
+                    linkGenerator,
+                    webRequest.controllerClass,
+                    (Controller)webRequest.attributes.getController(request)
+            )
+            subscriber.isRender = isRender
+            subscriber.urlConverter = urlConverter
+            if(isStreaming) {
+                subscriber.serverSendEvents = true
+                subscriber.serverSendEventName = ((StreamingResult)timeoutResult).eventName
+            }
+
+            // handle RxJava Observables
+            if(isObservable) {
+
+                Observable observable = (Observable)actionResult
+
+                // in a separate thread register the observable subscriber
+                asyncContext.start {
+                    observable.subscribe(subscriber)
                 }
-                observable.subscribe(subscriber)
+            }
+            else {
+                NewObservableResult newObservableResult = (NewObservableResult)actionResult
+                Observable newObservable = Observable.create( { Subscriber newSub ->
+                    asyncContext.start {
+                        Closure callable = newObservableResult.callable
+                        callable.setDelegate(newSub)
+                        callable.call(newSub)
+                    }
+                } as Observable.OnSubscribe)
+                newObservable.subscribe(subscriber)
             }
             // return null indicating that the request thread should be returned to the thread pool
             // async request processing will take over
