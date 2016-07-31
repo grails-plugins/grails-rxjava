@@ -105,11 +105,13 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     @Override
     void onNext(Object o) {
-        if(asyncComplete) {
-            if( !isUnsubscribed() ) {
-                unsubscribe()
+        synchronized (asyncContext) {
+            if(asyncComplete) {
+                if( !isUnsubscribed() ) {
+                    unsubscribe()
+                }
+                return
             }
-            return
         }
 
         if(o instanceof RxResult) {
@@ -252,27 +254,34 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     @Override
     void onComplete(AsyncEvent event) throws IOException {
-        asyncComplete = true
-        if(!isUnsubscribed()) {
-            unsubscribe()
+        synchronized (asyncContext) {
+            asyncComplete = true
+            if(!isUnsubscribed()) {
+                unsubscribe()
+            }
         }
     }
 
     @Override
     void onTimeout(AsyncEvent event) throws IOException {
-        if(!isUnsubscribed()) {
-            unsubscribe()
-            onError(event.throwable)
-            asyncComplete = true
+        synchronized (asyncContext) {
+
+            if(!isUnsubscribed()) {
+                unsubscribe()
+                onError(event.throwable)
+                asyncComplete = true
+            }
         }
     }
 
     @Override
     void onError(AsyncEvent event) throws IOException {
-        if(!isUnsubscribed()) {
-            unsubscribe()
-            onError(event.throwable)
-            asyncComplete = true
+        synchronized (asyncContext) {
+            if(!isUnsubscribed()) {
+                unsubscribe()
+                onError(event.throwable)
+                asyncComplete = true
+            }
         }
     }
 
