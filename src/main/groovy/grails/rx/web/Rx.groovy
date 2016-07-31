@@ -258,7 +258,7 @@ class Rx {
      * @return The observable result
      */
     static <T> NewObservableResult<T> create(@DelegatesTo(Subscriber) Closure<T> callable) {
-        return new NewObservableResult<T>(callable, -1)
+        return new NewObservableResult<T>(callable, -1L)
     }
 
     /**
