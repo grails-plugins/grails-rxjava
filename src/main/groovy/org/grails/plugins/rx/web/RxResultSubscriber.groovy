@@ -43,9 +43,12 @@ import javax.servlet.http.HttpServletResponse
 @Slf4j
 class RxResultSubscriber extends Subscriber implements AsyncListener {
     /**
-     * The Async context
+     * The prefix for server sent events
      */
     public static final String DATA_PREFIX = "data: "
+    /**
+     * The Async context
+     */
     final GrailsAsyncContext asyncContext
     /**
      * The exception handler
@@ -198,57 +201,62 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
 
     @Override
     void onCompleted() {
-        // When the observable finishes emitting items
-        // terminate the asynchronous context in the appropriate manner based on the
-        // completion strategy
-        switch(completionStrategy) {
-            case RxCompletionStrategy.COMPLETE:
-                asyncContext.complete()
-                break
-            case RxCompletionStrategy.DISPATCH:
-                asyncContext.dispatch()
-                break
-            case RxCompletionStrategy.NONE:
-                // for none, the RxResult will have terminated the asynchronous context so do nothing
-                break
-            default:
-                if(isRender) {
-                    asyncContext.response.flushBuffer()
-                }
-                asyncContext.complete()
+        synchronized (asyncContext) {
+            // When the observable finishes emitting items
+            // terminate the asynchronous context in the appropriate manner based on the
+            // completion strategy
+            switch(completionStrategy) {
+                case RxCompletionStrategy.COMPLETE:
+                    asyncContext.complete()
+                    break
+                case RxCompletionStrategy.DISPATCH:
+                    asyncContext.dispatch()
+                    break
+                case RxCompletionStrategy.NONE:
+                    // for none, the RxResult will have terminated the asynchronous context so do nothing
+                    break
+                default:
+                    if(isRender) {
+                        asyncContext.response.flushBuffer()
+                    }
+                    asyncContext.complete()
+            }
+
         }
     }
 
     @Override
     void onError(Throwable e) {
-        if(!asyncComplete && !asyncContext.response.isCommitted()) {
-            // if an error occurred and the response has not yet been commited try and handle it
-            def httpServletResponse = (HttpServletResponse) asyncContext.response
-            // first check if the exception resolver and resolve a model and view
-            if(exceptionResolver != null) {
-                def modelAndView = exceptionResolver.resolveException((HttpServletRequest) asyncContext.request, httpServletResponse, this, (Exception) e)
-                if(modelAndView != null) {
-                    asyncContext.getRequest().setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView);
-                    asyncContext.dispatch()
+        synchronized (asyncContext) {
+            if(!asyncComplete && !asyncContext.response.isCommitted()) {
+                // if an error occurred and the response has not yet been commited try and handle it
+                def httpServletResponse = (HttpServletResponse) asyncContext.response
+                // first check if the exception resolver and resolve a model and view
+                if(exceptionResolver != null) {
+                    def modelAndView = exceptionResolver.resolveException((HttpServletRequest) asyncContext.request, httpServletResponse, this, (Exception) e)
+                    if(modelAndView != null) {
+                        asyncContext.getRequest().setAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW, modelAndView);
+                        asyncContext.dispatch()
+                    }
+                    else {
+                        // if the error can't be resolved send the default error
+                        sendDefaultError(e, httpServletResponse)
+                    }
                 }
                 else {
-                    // if the error can't be resolved send the default error
                     sendDefaultError(e, httpServletResponse)
                 }
             }
-            else {
-                sendDefaultError(e, httpServletResponse)
+            else if(!asyncComplete) {
+                if(e != null)  {
+                    log.error("Async Dispatch Error: ${e.message}", e)
+                }
+                else {
+                    log.debug("Async timeout occurred")
+                }
+                asyncContext.request.removeAttribute(WebAsyncUtils.WEB_ASYNC_MANAGER_ATTRIBUTE)
+                asyncContext.complete()
             }
-        }
-        else if(!asyncComplete) {
-            if(e != null)  {
-                log.error("Async Dispatch Error: ${e.message}", e)
-            }
-            else {
-                log.debug("Async timeout occurred")
-            }
-            asyncContext.request.removeAttribute(WebAsyncUtils.WEB_ASYNC_MANAGER_ATTRIBUTE)
-            asyncContext.complete()
         }
     }
 
