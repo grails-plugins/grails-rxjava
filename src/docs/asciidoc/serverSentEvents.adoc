@@ -1,41 +1,37 @@
 You can write controllers that support https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events[Server Sent Events] using the RxJava plugin for Grails.
 
-Using the link:groovydoc/grails/rx/web/Rx.html#stream(Observable<T>,%20java.lang.Long,%20java.util.concurrent.TimeUnit)[stream] method you can return an observable that streams events to the browser.
+Using the link:groovydoc/grails/rx/web/helper/RxHelper.html#stream(Observable<T>,%20java.lang.Long,%20java.util.concurrent.TimeUnit)[stream] method you can return an observable that streams events to the browser.
 
 For example:
 
 [source,groovy]
 ----
 def index() {
-    def observable = Observable.create({ Subscriber subscriber -> <1>
-        task { <2>
-            for(i in (0..5)) {
-                if(i % 2 == 0) {
-                    subscriber.onNext(
-                        render("Tick") <3>
-                    )
-                }
-                else {
-                    subscriber.onNext(
-                        render("Tock")
-                    )
 
-                }
-                sleep 1000
-            }
-            subscriber.onCompleted() <4>
-        }
-    } as Observable.OnSubscribe)
+    rx.stream { Subscriber subscriber -> <1>
+       for(i in (0..5)) {
+           if(i % 2 == 0) {
+               subscriber.onNext(
+                   rx.render("Tick") <2>
+               )
+           }
+           else {
+               subscriber.onNext(
+                   rx.render("Tock")
+               )
 
-    stream observable <5>
+           }
+           sleep 1000 <3>
+       }
+       subscriber.onCompleted() <4>
+   } <5>
 }
 ----
 
-<1> Create a new `rx.Observable`
-<2> Use the `Promises.task` method to process the observable asynchronously
-<3> Emit a new item from the `Observable` using `onNext`
-<4> Mark the `Observable` as complete when work is complete
-<5> Return the `Observable` from a controller with the `stream` method
+<1> Call the `stream` method passing a closure that accepts an `rx.Subscriber` to start sending events
+<2> Emit a new item from the `Observable` using `onNext`
+<3> Call `sleep` to simulate a slow request
+<4> Call `onCompleted` to complete the request
 
 
 The above example is a simple example that simulates a process that takes a while using the `sleep` method, alternating the words "Tick" and "Tock".
@@ -61,7 +57,7 @@ If you wish to send a particular named event you can use the name argument of th
 
 [source,groovy]
 ----
-stream "ticktock", observable
+stream "ticktock", { Subscriber subscriber ->
 ----
 
 And then attach an event listener for only that event on the client:

@@ -1,37 +1,29 @@
 package rxjava.demo
 
-import static grails.rx.web.Rx.*
 import rx.Subscriber
-
-import static grails.async.Promises.*
-import rx.Observable
-
+import grails.rx.web.*
 /**
  * Created by graemerocher on 28/07/2016.
  */
-class TickTockController {
+class TickTockController implements RxController {
 
     def index() {
-        def observable = Observable.create({ Subscriber subscriber ->
-            task {
-                for(i in (0..5)) {
-                    if(i % 2 == 0) {
-                        subscriber.onNext(
-                            render("Tick")
-                        )
-                    }
-                    else {
-                        subscriber.onNext(
-                            render("Tock")
-                        )
-
-                    }
-                    sleep 1000
+        rx.stream { Subscriber subscriber ->
+            for(i in (0..5)) {
+                if(i % 2 == 0) {
+                    subscriber.onNext(
+                        rx.render("Tick")
+                    )
                 }
-                subscriber.onCompleted()
-            }
-        } as Observable.OnSubscribe)
+                else {
+                    subscriber.onNext(
+                        rx.render("Tock")
+                    )
 
-        stream observable
+                }
+                sleep 1000
+            }
+            subscriber.onCompleted()
+        }
     }
 }
