@@ -446,7 +446,20 @@ import static rx.Observable.*</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>As you can see typically you also statically import the <code>rx.Observable</code> factory methods.</p>
+<p>Alternatively you can implement the <code>RxController</code> trait and use the <code>rx</code> property which is an instance of <code>RxHelper</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-groovy" data-lang="groovy">import grails.rx.web.*
+import static rx.Observable.*
+
+class MyController implements RxController {
+
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Also notice you typically statically import the <code>rx.Observable</code> factory methods.</p>
 </div>
 <div class="paragraph">
 <p>Generally when writing controllers that work with RxJava you must return an <code>rx.Observable</code> from the controller.</p>
@@ -474,7 +487,7 @@ import static rx.Observable.*</code></pre>
 <p>This the the most simple case and doesn&#8217;t require using any of methods of the <code>grails.rx.web.Rx</code> class.</p>
 </div>
 <div class="paragraph">
-<p>However, you may want to customize the response and this is where the <code>grails.rx.web.Rx</code> comes in. In the following section we will go through some examples of how to use the class to formulate responses.</p>
+<p>However, you may want to customize the response and this is where the the API provided by <code>RxController</code> comes in. In the following section we will go through some examples of how to use the class to formulate responses.</p>
 </div>
 <div class="sect2">
 <h3 id="_retrieving_an_object_reactively">Retrieving an Object Reactively</h3>
@@ -486,10 +499,10 @@ import static rx.Observable.*</code></pre>
 <pre class="highlight"><code class="language-groovy" data-lang="groovy">def show() {
     Book.get(params.id?.toString()) <i class="conum" data-value="1"></i><b>(1)</b>
             .map { Book book -&gt;
-        respond(book) <i class="conum" data-value="2"></i><b>(2)</b>
+        rx.respond(book) <i class="conum" data-value="2"></i><b>(2)</b>
     }
     .switchIfEmpty( <i class="conum" data-value="3"></i><b>(3)</b>
-        just( Rx.render(status: NOT_FOUND) ) <i class="conum" data-value="4"></i><b>(4)</b>
+        just( rx.render(status: NOT_FOUND) ) <i class="conum" data-value="4"></i><b>(4)</b>
     )
 }</code></pre>
 </div>
@@ -502,7 +515,7 @@ import static rx.Observable.*</code></pre>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>If the <code>rx.Observable</code> emits a result, map it to the <a href="groovydoc/grails/rx/web/Rx.html#respond(def,%20java.util.Map)">respond</a> method using the <a href="http://reactivex.io/RxJava/javadoc/rx/Observable.html#map(rx.functions.Func1)">Observable.map</a> method.</td>
+<td>If the <code>rx.Observable</code> emits a result, map it to the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#respond(def,%20java.util.Map)">respond</a> method using the <a href="http://reactivex.io/RxJava/javadoc/rx/Observable.html#map(rx.functions.Func1)">Observable.map</a> method.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
@@ -532,7 +545,7 @@ import static rx.Observable.*</code></pre>
     String author = params.author <i class="conum" data-value="1"></i><b>(1)</b>
     Book.get(params.id?.toString())
             .map { Book book -&gt;
-        render view:"book", model:[book:book, author:author] <i class="conum" data-value="2"></i><b>(2)</b>
+        rx.render view:"book", model:[book:book, author:author] <i class="conum" data-value="2"></i><b>(2)</b>
     }
 }</code></pre>
 </div>
@@ -564,8 +577,8 @@ import static rx.Observable.*</code></pre>
     params.max = Math.min(max ?: 10, 100)
     zip( Book.list(params), <i class="conum" data-value="1"></i><b>(1)</b>
          Book.count() ) { List bookList, Number count -&gt; <i class="conum" data-value="2"></i><b>(2)</b>
-        render view:"index", <i class="conum" data-value="3"></i><b>(3)</b>
-               model:[bookList: bookList, bookCount: count]
+        rx.render view:"index", <i class="conum" data-value="3"></i><b>(3)</b>
+                  model:[bookList: bookList, bookCount: count]
     }
 }</code></pre>
 </div>
@@ -582,7 +595,7 @@ import static rx.Observable.*</code></pre>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>Finally, the <code>Rx.render(..)</code> method is used to indicate that the <code>index</code> view should be rendered with the appropriate model</td>
+<td>Finally, the <code>RxHelper.render(..)</code> method is used to indicate that the <code>index</code> view should be rendered with the appropriate model</td>
 </tr>
 </table>
 </div>
@@ -596,7 +609,7 @@ import static rx.Observable.*</code></pre>
 <p>Saving RxGORM objects presents a different set of challenges. One challenge is you typically need to bind request data to the object in a non-blocking manner.</p>
 </div>
 <div class="paragraph">
-<p>With this in mind the <a href="groovydoc/grails/rx/web/Rx.html#bindData(java.lang.Object,%20java.lang.Object,%20java.util.Map,%20java.lang.String)">Rx.bindData(..)</a> method provides the ability to bind an incoming JSON body to an object.</p>
+<p>With this in mind the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#bindData(java.lang.Object,%20java.lang.Object,%20java.util.Map,%20java.lang.String)">Rx.bindData(..)</a> method provides the ability to bind an incoming JSON body to an object.</p>
 </div>
 <div class="paragraph">
 <p>The <code>bindData</code> method returns an <code>rx.Observable</code> that emits the object once binding is complete.</p>
@@ -607,21 +620,21 @@ import static rx.Observable.*</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-groovy" data-lang="groovy">def save() {
-    Rx.bindData(new Book(), request) <i class="conum" data-value="1"></i><b>(1)</b>
+    rx.bindData(new Book(), request) <i class="conum" data-value="1"></i><b>(1)</b>
             .switchMap { Book book -&gt; <i class="conum" data-value="2"></i><b>(2)</b>
         if(book.hasErrors()) {
             just(
-                respond( book.errors, view:'create') <i class="conum" data-value="3"></i><b>(3)</b>
+                rx.respond( book.errors, view:'create') <i class="conum" data-value="3"></i><b>(3)</b>
             )
         }
         else {
             book.save(flush:true) <i class="conum" data-value="4"></i><b>(4)</b>
                     .map { Book b -&gt;
-                respond b, [status: CREATED, view:"show"] <i class="conum" data-value="5"></i><b>(5)</b>
+                rx.respond b, [status: CREATED, view:"show"] <i class="conum" data-value="5"></i><b>(5)</b>
             }
             .onErrorReturn { Throwable e -&gt; <i class="conum" data-value="6"></i><b>(6)</b>
                 if(e instanceof ValidationException) {
-                    respond e.errors, view:'create'
+                    rx.respond e.errors, view:'create'
                 }
                 else {
                     log.error("Error saving entity: $e.message", e)
@@ -645,7 +658,7 @@ import static rx.Observable.*</code></pre>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>If the object has errors then the errors are rendered using the <a href="groovydoc/grails/rx/web/Rx.html#respond(def,%20java.util.Map)">respond</a> method.</td>
+<td>If the object has errors then the errors are rendered using the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#respond(def,%20java.util.Map)">respond</a> method.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
@@ -665,7 +678,7 @@ import static rx.Observable.*</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-08-01 10:03:04 UTC
+Last updated 2016-08-22 10:07:48 UTC
 </div>
 </div>
 </body>

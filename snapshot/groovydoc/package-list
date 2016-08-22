@@ -1,5 +1,6 @@
 grails.plugins.rx.init
 grails.rx.web
+grails.rx.web.helper
 org.grails.plugins.rx
 org.grails.plugins.rx.renderer
 org.grails.plugins.rx.web
