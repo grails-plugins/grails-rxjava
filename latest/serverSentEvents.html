@@ -430,7 +430,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <p>You can write controllers that support <a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events">Server Sent Events</a> using the RxJava plugin for Grails.</p>
 </div>
 <div class="paragraph">
-<p>Using the <a href="groovydoc/grails/rx/web/Rx.html#stream(Observable&lt;T&gt;,%20java.lang.Long,%20java.util.concurrent.TimeUnit)">stream</a> method you can return an observable that streams events to the browser.</p>
+<p>Using the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#stream(Observable&lt;T&gt;,%20java.lang.Long,%20java.util.concurrent.TimeUnit)">stream</a> method you can return an observable that streams events to the browser.</p>
 </div>
 <div class="paragraph">
 <p>For example:</p>
@@ -438,27 +438,24 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-groovy" data-lang="groovy">def index() {
-    def observable = Observable.create({ Subscriber subscriber -&gt; <i class="conum" data-value="1"></i><b>(1)</b>
-        task { <i class="conum" data-value="2"></i><b>(2)</b>
-            for(i in (0..5)) {
-                if(i % 2 == 0) {
-                    subscriber.onNext(
-                        render("Tick") <i class="conum" data-value="3"></i><b>(3)</b>
-                    )
-                }
-                else {
-                    subscriber.onNext(
-                        render("Tock")
-                    )
 
-                }
-                sleep 1000
-            }
-            subscriber.onCompleted() <i class="conum" data-value="4"></i><b>(4)</b>
-        }
-    } as Observable.OnSubscribe)
+    rx.stream { Subscriber subscriber -&gt; <i class="conum" data-value="1"></i><b>(1)</b>
+       for(i in (0..5)) {
+           if(i % 2 == 0) {
+               subscriber.onNext(
+                   rx.render("Tick") <i class="conum" data-value="2"></i><b>(2)</b>
+               )
+           }
+           else {
+               subscriber.onNext(
+                   rx.render("Tock")
+               )
 
-    stream observable <i class="conum" data-value="5"></i><b>(5)</b>
+           }
+           sleep 1000 <i class="conum" data-value="3"></i><b>(3)</b>
+       }
+       subscriber.onCompleted() <i class="conum" data-value="4"></i><b>(4)</b>
+   }
 }</code></pre>
 </div>
 </div>
@@ -466,23 +463,19 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Create a new <code>rx.Observable</code></td>
+<td>Call the <code>stream</code> method passing a closure that accepts an <code>rx.Subscriber</code> to start sending events</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Use the <code>Promises.task</code> method to process the observable asynchronously</td>
+<td>Emit a one or many items using <code>onNext</code></td>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>Emit a new item from the <code>Observable</code> using <code>onNext</code></td>
+<td>Call <code>sleep</code> to simulate a slow request</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
-<td>Mark the <code>Observable</code> as complete when work is complete</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="5"></i><b>5</b></td>
-<td>Return the <code>Observable</code> from a controller with the <code>stream</code> method</td>
+<td>Call <code>onCompleted</code> to complete the request</td>
 </tr>
 </table>
 </div>
@@ -505,15 +498,27 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 tickTock()</code></pre>
 </div>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The <code>EventSource</code> object is supported in <a href="http://caniuse.com/#feat=eventsource">most modern browsers</a>, except Internet Explorer. You can use <a href="https://github.com/remy/polyfills/blob/master/EventSource.js">polyfills JavaScript</a> replacement for IE.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
-<p>In the above exmple the <code>onmessage</code> handler will be invoked every time the <code>Observable</code> emits an item.</p>
+<p>In the above example the <code>onmessage</code> handler will be invoked every time an item is emitted.</p>
 </div>
 <div class="paragraph">
 <p>If you wish to send a particular named event you can use the name argument of the <code>stream</code> method:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-groovy" data-lang="groovy">stream "ticktock", observable</code></pre>
+<pre class="highlight"><code class="language-groovy" data-lang="groovy">stream "ticktock", { Subscriber subscriber -&gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -533,7 +538,7 @@ tickTock()</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-07-28 20:39:30 UTC
+Last updated 2016-08-23 09:10:50 UTC
 </div>
 </div>
 </body>

@@ -562,7 +562,7 @@ table.CodeRay td.code>pre{padding:0}
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="groovy">dependencies {
     ...
-    compile 'org.grails.plugins:rxjava:1.0.0.M2'
+    compile 'org.grails.plugins:rxjava:1.0.0.RC1'
 }</code></pre>
 </div>
 </div>
@@ -607,7 +607,20 @@ table.CodeRay td.code>pre{padding:0}
 </div>
 </div>
 <div class="paragraph">
-<p>As you can see typically you also statically import the <code>rx.Observable</code> factory methods.</p>
+<p>Alternatively you can implement the <code>RxController</code> trait and use the <code>rx</code> property which is an instance of <code>RxHelper</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="groovy"><span class="keyword">import</span> <span class="include">grails.rx.web.*</span>
+<span class="keyword">import</span> <span class="include">static</span> <span class="include">rx.Observable.*</span>
+
+<span class="type">class</span> <span class="class">MyController</span> <span class="directive">implements</span> RxController {
+
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Also notice you typically statically import the <code>rx.Observable</code> factory methods.</p>
 </div>
 <div class="paragraph">
 <p>Generally when writing controllers that work with RxJava you must return an <code>rx.Observable</code> from the controller.</p>
@@ -635,7 +648,7 @@ table.CodeRay td.code>pre{padding:0}
 <p>This the the most simple case and doesn&#8217;t require using any of methods of the <code>grails.rx.web.Rx</code> class.</p>
 </div>
 <div class="paragraph">
-<p>However, you may want to customize the response and this is where the <code>grails.rx.web.Rx</code> comes in. In the following section we will go through some examples of how to use the class to formulate responses.</p>
+<p>However, you may want to customize the response and this is where the the API provided by <code>RxController</code> comes in. In the following section we will go through some examples of how to use the class to formulate responses.</p>
 </div>
 <div class="sect2">
 <h3 id="_retrieving_an_object_reactively">3.1. Retrieving an Object Reactively</h3>
@@ -647,10 +660,10 @@ table.CodeRay td.code>pre{padding:0}
 <pre class="CodeRay highlight"><code data-lang="groovy"><span class="keyword">def</span> <span class="function">show</span>() {
     <span class="predefined-type">Book</span>.get(params.id?.toString()) <i class="conum" data-value="1"></i><b>(1)</b>
             .map { <span class="predefined-type">Book</span> book -&gt;
-        respond(book) <i class="conum" data-value="2"></i><b>(2)</b>
+        rx.respond(book) <i class="conum" data-value="2"></i><b>(2)</b>
     }
     .switchIfEmpty( <i class="conum" data-value="3"></i><b>(3)</b>
-        just( Rx.render(<span class="key">status</span>: NOT_FOUND) ) <i class="conum" data-value="4"></i><b>(4)</b>
+        just( rx.render(<span class="key">status</span>: NOT_FOUND) ) <i class="conum" data-value="4"></i><b>(4)</b>
     )
 }</code></pre>
 </div>
@@ -663,7 +676,7 @@ table.CodeRay td.code>pre{padding:0}
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>If the <code>rx.Observable</code> emits a result, map it to the <a href="groovydoc/grails/rx/web/Rx.html#respond(def,%20java.util.Map)">respond</a> method using the <a href="http://reactivex.io/RxJava/javadoc/rx/Observable.html#map(rx.functions.Func1)">Observable.map</a> method.</td>
+<td>If the <code>rx.Observable</code> emits a result, map it to the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#respond(def,%20java.util.Map)">respond</a> method using the <a href="http://reactivex.io/RxJava/javadoc/rx/Observable.html#map(rx.functions.Func1)">Observable.map</a> method.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
@@ -693,7 +706,7 @@ table.CodeRay td.code>pre{padding:0}
     <span class="predefined-type">String</span> author = params.author <i class="conum" data-value="1"></i><b>(1)</b>
     <span class="predefined-type">Book</span>.get(params.id?.toString())
             .map { <span class="predefined-type">Book</span> book -&gt;
-        render <span class="key">view</span>:<span class="string"><span class="delimiter">&quot;</span><span class="content">book</span><span class="delimiter">&quot;</span></span>, <span class="key">model</span>:[<span class="key">book</span>:book, <span class="key">author</span>:author] <i class="conum" data-value="2"></i><b>(2)</b>
+        rx.render <span class="key">view</span>:<span class="string"><span class="delimiter">&quot;</span><span class="content">book</span><span class="delimiter">&quot;</span></span>, <span class="key">model</span>:[<span class="key">book</span>:book, <span class="key">author</span>:author] <i class="conum" data-value="2"></i><b>(2)</b>
     }
 }</code></pre>
 </div>
@@ -725,8 +738,8 @@ table.CodeRay td.code>pre{padding:0}
     params.max = <span class="predefined-type">Math</span>.min(max ?: <span class="integer">10</span>, <span class="integer">100</span>)
     zip( <span class="predefined-type">Book</span>.list(params), <i class="conum" data-value="1"></i><b>(1)</b>
          <span class="predefined-type">Book</span>.count() ) { <span class="predefined-type">List</span> bookList, <span class="predefined-type">Number</span> count -&gt; <i class="conum" data-value="2"></i><b>(2)</b>
-        render <span class="key">view</span>:<span class="string"><span class="delimiter">&quot;</span><span class="content">index</span><span class="delimiter">&quot;</span></span>, <i class="conum" data-value="3"></i><b>(3)</b>
-               <span class="key">model</span>:[<span class="key">bookList</span>: bookList, <span class="key">bookCount</span>: count]
+        rx.render <span class="key">view</span>:<span class="string"><span class="delimiter">&quot;</span><span class="content">index</span><span class="delimiter">&quot;</span></span>, <i class="conum" data-value="3"></i><b>(3)</b>
+                  <span class="key">model</span>:[<span class="key">bookList</span>: bookList, <span class="key">bookCount</span>: count]
     }
 }</code></pre>
 </div>
@@ -743,7 +756,7 @@ table.CodeRay td.code>pre{padding:0}
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>Finally, the <code>Rx.render(..)</code> method is used to indicate that the <code>index</code> view should be rendered with the appropriate model</td>
+<td>Finally, the <code>RxHelper.render(..)</code> method is used to indicate that the <code>index</code> view should be rendered with the appropriate model</td>
 </tr>
 </table>
 </div>
@@ -757,7 +770,7 @@ table.CodeRay td.code>pre{padding:0}
 <p>Saving RxGORM objects presents a different set of challenges. One challenge is you typically need to bind request data to the object in a non-blocking manner.</p>
 </div>
 <div class="paragraph">
-<p>With this in mind the <a href="groovydoc/grails/rx/web/Rx.html#bindData(java.lang.Object,%20java.lang.Object,%20java.util.Map,%20java.lang.String)">Rx.bindData(..)</a> method provides the ability to bind an incoming JSON body to an object.</p>
+<p>With this in mind the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#bindData(java.lang.Object,%20java.lang.Object,%20java.util.Map,%20java.lang.String)">Rx.bindData(..)</a> method provides the ability to bind an incoming JSON body to an object.</p>
 </div>
 <div class="paragraph">
 <p>The <code>bindData</code> method returns an <code>rx.Observable</code> that emits the object once binding is complete.</p>
@@ -768,21 +781,21 @@ table.CodeRay td.code>pre{padding:0}
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="groovy"><span class="keyword">def</span> <span class="function">save</span>() {
-    Rx.bindData(<span class="keyword">new</span> <span class="predefined-type">Book</span>(), request) <i class="conum" data-value="1"></i><b>(1)</b>
+    rx.bindData(<span class="keyword">new</span> <span class="predefined-type">Book</span>(), request) <i class="conum" data-value="1"></i><b>(1)</b>
             .switchMap { <span class="predefined-type">Book</span> book -&gt; <i class="conum" data-value="2"></i><b>(2)</b>
         <span class="keyword">if</span>(book.hasErrors()) {
             just(
-                respond( book.errors, <span class="key">view</span>:<span class="string"><span class="delimiter">'</span><span class="content">create</span><span class="delimiter">'</span></span>) <i class="conum" data-value="3"></i><b>(3)</b>
+                rx.respond( book.errors, <span class="key">view</span>:<span class="string"><span class="delimiter">'</span><span class="content">create</span><span class="delimiter">'</span></span>) <i class="conum" data-value="3"></i><b>(3)</b>
             )
         }
         <span class="keyword">else</span> {
             book.save(<span class="key">flush</span>:<span class="predefined-constant">true</span>) <i class="conum" data-value="4"></i><b>(4)</b>
                     .map { <span class="predefined-type">Book</span> b -&gt;
-                respond b, [<span class="key">status</span>: CREATED, <span class="key">view</span>:<span class="string"><span class="delimiter">&quot;</span><span class="content">show</span><span class="delimiter">&quot;</span></span>] <i class="conum" data-value="5"></i><b>(5)</b>
+                rx.respond b, [<span class="key">status</span>: CREATED, <span class="key">view</span>:<span class="string"><span class="delimiter">&quot;</span><span class="content">show</span><span class="delimiter">&quot;</span></span>] <i class="conum" data-value="5"></i><b>(5)</b>
             }
             .onErrorReturn { <span class="predefined-type">Throwable</span> e -&gt; <i class="conum" data-value="6"></i><b>(6)</b>
                 <span class="keyword">if</span>(e <span class="keyword">instanceof</span> ValidationException) {
-                    respond e.errors, <span class="key">view</span>:<span class="string"><span class="delimiter">'</span><span class="content">create</span><span class="delimiter">'</span></span>
+                    rx.respond e.errors, <span class="key">view</span>:<span class="string"><span class="delimiter">'</span><span class="content">create</span><span class="delimiter">'</span></span>
                 }
                 <span class="keyword">else</span> {
                     log.error(<span class="string"><span class="delimiter">&quot;</span><span class="content">Error saving entity: </span><span class="inline"><span class="inline-delimiter">$</span>e</span><span class="content">.message</span><span class="delimiter">&quot;</span></span>, e)
@@ -806,7 +819,7 @@ table.CodeRay td.code>pre{padding:0}
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>If the object has errors then the errors are rendered using the <a href="groovydoc/grails/rx/web/Rx.html#respond(def,%20java.util.Map)">respond</a> method.</td>
+<td>If the object has errors then the errors are rendered using the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#respond(def,%20java.util.Map)">respond</a> method.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
@@ -832,7 +845,7 @@ table.CodeRay td.code>pre{padding:0}
 <p>You can write controllers that support <a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events">Server Sent Events</a> using the RxJava plugin for Grails.</p>
 </div>
 <div class="paragraph">
-<p>Using the <a href="groovydoc/grails/rx/web/Rx.html#stream(Observable&lt;T&gt;,%20java.lang.Long,%20java.util.concurrent.TimeUnit)">stream</a> method you can return an observable that streams events to the browser.</p>
+<p>Using the <a href="groovydoc/grails/rx/web/helper/RxHelper.html#stream(Observable&lt;T&gt;,%20java.lang.Long,%20java.util.concurrent.TimeUnit)">stream</a> method you can return an observable that streams events to the browser.</p>
 </div>
 <div class="paragraph">
 <p>For example:</p>
@@ -840,27 +853,24 @@ table.CodeRay td.code>pre{padding:0}
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="groovy"><span class="keyword">def</span> <span class="function">index</span>() {
-    <span class="keyword">def</span> observable = <span class="predefined-type">Observable</span>.create({ Subscriber subscriber -&gt; <i class="conum" data-value="1"></i><b>(1)</b>
-        task { <i class="conum" data-value="2"></i><b>(2)</b>
-            <span class="keyword">for</span>(i <span class="keyword">in</span> (<span class="integer">0</span>..<span class="integer">5</span>)) {
-                <span class="keyword">if</span>(i % <span class="integer">2</span> == <span class="integer">0</span>) {
-                    subscriber.onNext(
-                        render(<span class="string"><span class="delimiter">&quot;</span><span class="content">Tick</span><span class="delimiter">&quot;</span></span>) <i class="conum" data-value="3"></i><b>(3)</b>
-                    )
-                }
-                <span class="keyword">else</span> {
-                    subscriber.onNext(
-                        render(<span class="string"><span class="delimiter">&quot;</span><span class="content">Tock</span><span class="delimiter">&quot;</span></span>)
-                    )
 
-                }
-                sleep <span class="integer">1000</span>
-            }
-            subscriber.onCompleted() <i class="conum" data-value="4"></i><b>(4)</b>
-        }
-    } <span class="keyword">as</span> <span class="predefined-type">Observable</span>.OnSubscribe)
+    rx.stream { Subscriber subscriber -&gt; <i class="conum" data-value="1"></i><b>(1)</b>
+       <span class="keyword">for</span>(i <span class="keyword">in</span> (<span class="integer">0</span>..<span class="integer">5</span>)) {
+           <span class="keyword">if</span>(i % <span class="integer">2</span> == <span class="integer">0</span>) {
+               subscriber.onNext(
+                   rx.render(<span class="string"><span class="delimiter">&quot;</span><span class="content">Tick</span><span class="delimiter">&quot;</span></span>) <i class="conum" data-value="2"></i><b>(2)</b>
+               )
+           }
+           <span class="keyword">else</span> {
+               subscriber.onNext(
+                   rx.render(<span class="string"><span class="delimiter">&quot;</span><span class="content">Tock</span><span class="delimiter">&quot;</span></span>)
+               )
 
-    stream observable <i class="conum" data-value="5"></i><b>(5)</b>
+           }
+           sleep <span class="integer">1000</span> <i class="conum" data-value="3"></i><b>(3)</b>
+       }
+       subscriber.onCompleted() <i class="conum" data-value="4"></i><b>(4)</b>
+   }
 }</code></pre>
 </div>
 </div>
@@ -868,23 +878,19 @@ table.CodeRay td.code>pre{padding:0}
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Create a new <code>rx.Observable</code></td>
+<td>Call the <code>stream</code> method passing a closure that accepts an <code>rx.Subscriber</code> to start sending events</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Use the <code>Promises.task</code> method to process the observable asynchronously</td>
+<td>Emit a one or many items using <code>onNext</code></td>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>Emit a new item from the <code>Observable</code> using <code>onNext</code></td>
+<td>Call <code>sleep</code> to simulate a slow request</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
-<td>Mark the <code>Observable</code> as complete when work is complete</td>
-</tr>
-<tr>
-<td><i class="conum" data-value="5"></i><b>5</b></td>
-<td>Return the <code>Observable</code> from a controller with the <code>stream</code> method</td>
+<td>Call <code>onCompleted</code> to complete the request</td>
 </tr>
 </table>
 </div>
@@ -907,15 +913,27 @@ table.CodeRay td.code>pre{padding:0}
 tickTock()</code></pre>
 </div>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The <code>EventSource</code> object is supported in <a href="http://caniuse.com/#feat=eventsource">most modern browsers</a>, except Internet Explorer. You can use <a href="https://github.com/remy/polyfills/blob/master/EventSource.js">polyfills JavaScript</a> replacement for IE.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
-<p>In the above exmple the <code>onmessage</code> handler will be invoked every time the <code>Observable</code> emits an item.</p>
+<p>In the above example the <code>onmessage</code> handler will be invoked every time an item is emitted.</p>
 </div>
 <div class="paragraph">
 <p>If you wish to send a particular named event you can use the name argument of the <code>stream</code> method:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="groovy">stream <span class="string"><span class="delimiter">&quot;</span><span class="content">ticktock</span><span class="delimiter">&quot;</span></span>, observable</code></pre>
+<pre class="CodeRay highlight"><code data-lang="groovy">stream <span class="string"><span class="delimiter">&quot;</span><span class="content">ticktock</span><span class="delimiter">&quot;</span></span>, { Subscriber subscriber -&gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -937,7 +955,7 @@ tickTock()</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-07-28 20:39:30 UTC
+Last updated 2016-08-23 09:10:50 UTC
 </div>
 </div>
 </body>
