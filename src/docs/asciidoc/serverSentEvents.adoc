@@ -24,12 +24,12 @@ def index() {
            sleep 1000 <3>
        }
        subscriber.onCompleted() <4>
-   } <5>
+   }
 }
 ----
 
 <1> Call the `stream` method passing a closure that accepts an `rx.Subscriber` to start sending events
-<2> Emit a new item from the `Observable` using `onNext`
+<2> Emit a one or many items using `onNext`
 <3> Call `sleep` to simulate a slow request
 <4> Call `onCompleted` to complete the request
 
@@ -51,7 +51,10 @@ function tickTock() {
 tickTock()
 ----
 
-In the above exmple the `onmessage` handler will be invoked every time the `Observable` emits an item.
+NOTE: The `EventSource` object is supported in http://caniuse.com/#feat=eventsource[most modern browsers], except Internet Explorer. You can use https://github.com/remy/polyfills/blob/master/EventSource.js[polyfills JavaScript] replacement for IE.
+
+
+In the above example the `onmessage` handler will be invoked every time an item is emitted.
 
 If you wish to send a particular named event you can use the name argument of the `stream` method:
 
