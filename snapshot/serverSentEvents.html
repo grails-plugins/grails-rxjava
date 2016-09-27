@@ -455,7 +455,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
            sleep 1000 <i class="conum" data-value="3"></i><b>(3)</b>
        }
        subscriber.onCompleted() <i class="conum" data-value="4"></i><b>(4)</b>
-   } <i class="conum" data-value="5"></i><b>(5)</b>
+   }
 }</code></pre>
 </div>
 </div>
@@ -467,7 +467,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>Emit a new item from the <code>Observable</code> using <code>onNext</code></td>
+<td>Emit a one or many items using <code>onNext</code></td>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
@@ -498,8 +498,20 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 tickTock()</code></pre>
 </div>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The <code>EventSource</code> object is supported in <a href="http://caniuse.com/#feat=eventsource">most modern browsers</a>, except Internet Explorer. You can use <a href="https://github.com/remy/polyfills/blob/master/EventSource.js">polyfills JavaScript</a> replacement for IE.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
-<p>In the above exmple the <code>onmessage</code> handler will be invoked every time the <code>Observable</code> emits an item.</p>
+<p>In the above example the <code>onmessage</code> handler will be invoked every time an item is emitted.</p>
 </div>
 <div class="paragraph">
 <p>If you wish to send a particular named event you can use the name argument of the <code>stream</code> method:</p>
@@ -526,7 +538,7 @@ tickTock()</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-08-22 10:07:48 UTC
+Last updated 2016-09-27 14:52:59 UTC
 </div>
 </div>
 </body>
