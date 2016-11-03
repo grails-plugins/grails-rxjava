@@ -5,6 +5,10 @@ import grails.web.databinding.DataBindingUtils
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import io.reactivex.Emitter
+import io.reactivex.Observable
+import io.reactivex.ObservableEmitter
+import io.reactivex.ObservableOnSubscribe
 import org.grails.plugins.rx.web.NewObservableResult
 import org.grails.plugins.rx.web.ObservableResult
 import org.grails.plugins.rx.web.StreamingNewObservableResult
@@ -15,8 +19,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
-import rx.Observable
-import rx.Subscriber
 
 import javax.servlet.ServletInputStream
 import javax.servlet.http.HttpServletRequest
@@ -178,8 +180,8 @@ class Rx {
      */
     @CompileDynamic
     static Observable bindData(Object object, Object bindingSource, Map arguments = Collections.emptyMap(), String filter = null) {
-        Observable.create( { Subscriber<? super Object> subscriber ->
-                subscriber.onStart()
+        Observable.create( { ObservableEmitter<? super Object> subscriber ->
+//                subscriber.onStart()
                 Promises.task {
                     if(bindingSource instanceof HttpServletRequest) {
                         WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(bindingSource)
@@ -204,10 +206,10 @@ class Rx {
                         object.properties = bindingSource
                     }
                     subscriber.onNext(object)
-                    subscriber.onCompleted()
+                    subscriber.onComplete()
 
                 }
-        } as Observable.OnSubscribe<Object>)
+        } as ObservableOnSubscribe<Object>)
     }
 
 
@@ -219,8 +221,8 @@ class Rx {
      * @return An observable
      */
     static Observable<InputStream> fromBody(HttpServletRequest request) {
-        Observable.create( { Subscriber<InputStream> subscriber ->
-            subscriber.onStart()
+        Observable.create( { ObservableEmitter<InputStream> subscriber ->
+//            subscriber.onStart()
             Promises.task {
                 InputStream inputStream = null
                 try {
@@ -231,12 +233,12 @@ class Rx {
                         subscriber.onError(e)
                     }
                 } finally {
-                    subscriber.onCompleted()
+                    subscriber.onComplete()
                     inputStream?.close()
                 }
 
             }
-        } as Observable.OnSubscribe<InputStream>)
+        } as ObservableOnSubscribe<InputStream>)
     }
 
     /**
@@ -257,7 +259,7 @@ class Rx {
      * @param callable The closure
      * @return The observable result
      */
-    static <T> NewObservableResult<T> create(@DelegatesTo(Subscriber) Closure<T> callable) {
+    static <T> NewObservableResult<T> create(@DelegatesTo(Emitter) Closure<T> callable) {
         return new NewObservableResult<T>(callable, -1L)
     }
 
@@ -266,7 +268,7 @@ class Rx {
      * @param callable The closure
      * @return The observable result
      */
-    static <T> NewObservableResult<T> create(Long timeout, TimeUnit unit, @DelegatesTo(Subscriber) Closure<T> callable) {
+    static <T> NewObservableResult<T> create(Long timeout, TimeUnit unit, @DelegatesTo(Emitter) Closure<T> callable) {
         return new NewObservableResult<T>(callable, timeout, unit)
     }
 
@@ -275,7 +277,7 @@ class Rx {
      * @param callable The closure
      * @return The observable result
      */
-    static <T> NewObservableResult<T> create(Long timeout, @DelegatesTo(Subscriber) Closure<T> callable) {
+    static <T> NewObservableResult<T> create(Long timeout, @DelegatesTo(Emitter) Closure<T> callable) {
         return new NewObservableResult<T>(callable, timeout)
     }
 
@@ -314,7 +316,7 @@ class Rx {
      * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
      * @return An observable result
      */
-    static <T> StreamingNewObservableResult<T> stream(Long timeout, TimeUnit unit, @DelegatesTo(Subscriber) Closure callable) {
+    static <T> StreamingNewObservableResult<T> stream(Long timeout, TimeUnit unit, @DelegatesTo(Emitter) Closure callable) {
         return new StreamingNewObservableResult<T>(callable, timeout, unit)
     }
 
@@ -325,7 +327,7 @@ class Rx {
      * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
      * @return An observable result
      */
-    static <T> StreamingNewObservableResult<T> stream(Long timeout, @DelegatesTo(Subscriber) Closure callable) {
+    static <T> StreamingNewObservableResult<T> stream(Long timeout, @DelegatesTo(Emitter) Closure callable) {
         return new StreamingNewObservableResult<T>(callable, timeout)
     }
 
@@ -335,7 +337,7 @@ class Rx {
      * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
      * @return An observable result
      */
-    static <T> StreamingNewObservableResult<T> stream(@DelegatesTo(Subscriber) Closure callable) {
+    static <T> StreamingNewObservableResult<T> stream(@DelegatesTo(Emitter) Closure callable) {
         return new StreamingNewObservableResult<T>(callable, -1L)
     }
     /**

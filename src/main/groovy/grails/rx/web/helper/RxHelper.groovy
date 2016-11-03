@@ -3,14 +3,14 @@ package grails.rx.web.helper
 import grails.rx.web.Rx
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import io.reactivex.Emitter
+import io.reactivex.Observable
 import org.grails.plugins.rx.web.NewObservableResult
 import org.grails.plugins.rx.web.ObservableResult
 import org.grails.plugins.rx.web.StreamingNewObservableResult
 import org.grails.plugins.rx.web.StreamingObservableResult
 import org.grails.plugins.rx.web.result.RxResult
 import org.grails.web.converters.Converter
-import rx.Observable
-import rx.Subscriber
 
 import javax.servlet.http.HttpServletRequest
 import java.util.concurrent.TimeUnit
@@ -212,7 +212,7 @@ class RxHelper {
      * @param callable The closure
      * @return The observable result
      */
-    public <T> NewObservableResult<T> create(@DelegatesTo(Subscriber) Closure<T> callable) {
+    public <T> NewObservableResult<T> create(@DelegatesTo(Emitter) Closure<T> callable) {
         Rx.create callable
     }
 
@@ -221,7 +221,7 @@ class RxHelper {
      * @param callable The closure
      * @return The observable result
      */
-    public <T> NewObservableResult<T> create(Long timeout, TimeUnit unit, @DelegatesTo(Subscriber) Closure<T> callable) {
+    public <T> NewObservableResult<T> create(Long timeout, TimeUnit unit, @DelegatesTo(Emitter) Closure<T> callable) {
         Rx.create timeout, unit, callable
     }
 
@@ -230,7 +230,7 @@ class RxHelper {
      * @param callable The closure
      * @return The observable result
      */
-    public <T> NewObservableResult<T> create(Long timeout, @DelegatesTo(Subscriber) Closure<T> callable) {
+    public <T> NewObservableResult<T> create(Long timeout, @DelegatesTo(Emitter) Closure<T> callable) {
         Rx.create timeout, callable
     }
 
@@ -267,7 +267,7 @@ class RxHelper {
      * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
      * @return An observable result
      */
-    public <T> StreamingNewObservableResult<T> stream(Long timeout, TimeUnit unit, @DelegatesTo(Subscriber) Closure callable) {
+    public <T> StreamingNewObservableResult<T> stream(Long timeout, TimeUnit unit, @DelegatesTo(Emitter) Closure callable) {
         Rx.stream timeout, unit, callable
     }
 
@@ -278,7 +278,7 @@ class RxHelper {
      * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
      * @return An observable result
      */
-    public <T> StreamingNewObservableResult<T> stream(Long timeout, @DelegatesTo(Subscriber) Closure callable) {
+    public <T> StreamingNewObservableResult<T> stream(Long timeout, @DelegatesTo(Emitter) Closure callable) {
         Rx.stream timeout, callable
     }
 
@@ -288,7 +288,7 @@ class RxHelper {
      * @param callable The closure, it should accept a single argument which is the rx.Subscriber instance
      * @return An observable result
      */
-    public <T> StreamingNewObservableResult<T> stream(@DelegatesTo(Subscriber) Closure callable) {
+    public <T> StreamingNewObservableResult<T> stream(@DelegatesTo(Emitter) Closure callable) {
         Rx.stream callable
     }
     /**

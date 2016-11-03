@@ -7,6 +7,9 @@ import grails.web.UrlConverter
 import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.reactivex.Emitter
+import io.reactivex.Observer
+import io.reactivex.disposables.Disposable
 import org.grails.plugins.rx.web.result.ForwardResult
 import org.grails.plugins.rx.web.result.RxCompletionStrategy
 import org.grails.plugins.rx.web.result.RxResult
@@ -18,19 +21,17 @@ import org.grails.web.util.WebUtils
 import org.springframework.http.HttpStatus
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.WebAsyncUtils
-import rx.Subscriber
 
 import javax.servlet.AsyncEvent
 import javax.servlet.AsyncListener
-import javax.servlet.ServletResponse
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 /**
- *  <p>A {@link Subscriber} that processed items emitted from an {@link rx.Observable} and produces
+ *  <p>A {@link Emitter} that processed items emitted from an {@link Observable} and produces
  *  an appropriate response.</p>
  *
- *  <p>If the {@link rx.Observable} emits a {@link RxResult} then processing is delegated to the result with the execute method
+ *  <p>If the {@link Observable} emits a {@link RxResult} then processing is delegated to the result with the execute method
  *  being wrapped in the asynchronous request.</p>
  *
  *  <p>Otherwise the current controller's respond method is called with the object emitted from the observable</p>
@@ -41,7 +42,7 @@ import javax.servlet.http.HttpServletResponse
  */
 @CompileStatic
 @Slf4j
-class RxResultSubscriber extends Subscriber implements AsyncListener {
+class RxResultSubscriber implements AsyncListener, Observer {
     /**
      * The prefix for server sent events
      */
@@ -91,6 +92,11 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
      */
     String serverSendEventName
 
+    /**
+     * the disposable
+     */
+    Disposable disposable
+
     protected RxCompletionStrategy completionStrategy = RxCompletionStrategy.DEFAULT
 
     RxResultSubscriber(GrailsAsyncContext asyncContext,
@@ -107,11 +113,16 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     }
 
     @Override
+    void onSubscribe(Disposable d) {
+        disposable = d
+    }
+
+    @Override
     void onNext(Object o) {
         synchronized (asyncContext) {
             if(asyncComplete) {
-                if( !isUnsubscribed() ) {
-                    unsubscribe()
+                if( disposable != null && !disposable.isDisposed() ) {
+                    disposable.dispose()
                 }
                 return
             }
@@ -200,7 +211,7 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     }
 
     @Override
-    void onCompleted() {
+    void onComplete() {
         synchronized (asyncContext) {
             // When the observable finishes emitting items
             // terminate the asynchronous context in the appropriate manner based on the
@@ -264,18 +275,18 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     void onComplete(AsyncEvent event) throws IOException {
         synchronized (asyncContext) {
             asyncComplete = true
-            if(!isUnsubscribed()) {
-                unsubscribe()
+            if( disposable != null && !disposable.isDisposed() ) {
+                disposable.dispose()
             }
+
         }
     }
 
     @Override
     void onTimeout(AsyncEvent event) throws IOException {
         synchronized (asyncContext) {
-
-            if(!isUnsubscribed()) {
-                unsubscribe()
+            if( disposable != null && !disposable.isDisposed() ) {
+                disposable.dispose()
                 onError(event.throwable)
                 asyncComplete = true
             }
@@ -285,8 +296,8 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
     @Override
     void onError(AsyncEvent event) throws IOException {
         synchronized (asyncContext) {
-            if(!isUnsubscribed()) {
-                unsubscribe()
+            if( disposable != null && !disposable.isDisposed() ) {
+                disposable.dispose()
                 onError(event.throwable)
                 asyncComplete = true
             }

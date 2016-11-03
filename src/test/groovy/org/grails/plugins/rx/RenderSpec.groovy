@@ -2,6 +2,7 @@ package org.grails.plugins.rx
 
 import grails.artefact.Controller
 import grails.util.GrailsWebMockUtil
+import io.reactivex.Observable
 import org.grails.plugins.rx.web.RxResultTransformer
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -9,7 +10,6 @@ import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.servlet.ModelAndView
-import rx.Observable
 import spock.lang.Specification
 
 import static grails.rx.web.Rx.*

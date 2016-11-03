@@ -7,10 +7,10 @@ import grails.util.GrailsWebUtil
 import grails.web.mime.MimeType
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import io.reactivex.Observable
 import org.grails.plugins.rx.web.RxResultTransformer
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.springframework.beans.factory.annotation.Autowired
-import rx.Observable
 
 /**
  * A renderer for observables

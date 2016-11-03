@@ -6,6 +6,9 @@ import grails.web.UrlConverter
 import grails.web.mapping.LinkGenerator
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.reactivex.Observable
+import io.reactivex.ObservableEmitter
+import io.reactivex.ObservableOnSubscribe
 import org.grails.plugins.web.async.GrailsAsyncContext
 import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.servlet.mvc.ActionResultTransformer
@@ -15,8 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.context.request.async.AsyncWebRequest
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
-import rx.Observable
-import rx.Subscriber
 
 import javax.servlet.AsyncContext
 import javax.servlet.ServletResponse
@@ -122,13 +123,13 @@ class RxResultTransformer implements ActionResultTransformer {
             }
             else {
                 NewObservableResult newObservableResult = (NewObservableResult)actionResult
-                Observable newObservable = Observable.create( { Subscriber newSub ->
+                Observable newObservable = Observable.create( { ObservableEmitter newSub ->
                     asyncContext.start {
                         Closure callable = newObservableResult.callable
                         callable.setDelegate(newSub)
                         callable.call(newSub)
                     }
-                } as Observable.OnSubscribe)
+                } as ObservableOnSubscribe)
                 newObservable.subscribe(subscriber)
             }
             // return null indicating that the request thread should be returned to the thread pool

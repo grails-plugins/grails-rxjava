@@ -4,6 +4,7 @@ import grails.artefact.Controller
 import grails.artefact.controller.RestResponder
 import grails.converters.JSON
 import grails.util.GrailsWebMockUtil
+import io.reactivex.Emitter
 import org.grails.plugins.rx.web.NewObservableResult
 import org.grails.plugins.rx.web.RxResultTransformer
 import org.grails.plugins.rx.web.StreamingNewObservableResult
@@ -14,7 +15,6 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
-import rx.Subscriber
 import spock.lang.Specification
 import static grails.rx.web.Rx.*
 /**
@@ -119,27 +119,27 @@ data: {"foo":"bar 3"}
 }
 class NewObservableController implements Controller, RestResponder{
     def index() {
-        create { Subscriber subscriber ->
+        create { Emitter subscriber ->
             subscriber.onNext(
                 render("Foo")
             )
-            subscriber.onCompleted()
+            subscriber.onComplete()
         }
     }
 
     def stream() {
-        stream { Subscriber subscriber ->
+        stream { Emitter subscriber ->
             for(i in 0..3) {
                 subscriber.onNext(
                         render("Foo $i")
                 )
             }
-            subscriber.onCompleted()
+            subscriber.onComplete()
         }
     }
 
     def streamJson() {
-        stream { Subscriber subscriber ->
+        stream { Emitter subscriber ->
             for(i in 0..3) {
                 subscriber.onNext(
                         render(contentType:"application/json") {
@@ -147,7 +147,7 @@ class NewObservableController implements Controller, RestResponder{
                         }
                 )
             }
-            subscriber.onCompleted()
+            subscriber.onComplete()
         }
     }
 }

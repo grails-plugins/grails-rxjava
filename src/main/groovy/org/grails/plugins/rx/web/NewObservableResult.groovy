@@ -1,8 +1,7 @@
 package org.grails.plugins.rx.web
 
 import groovy.transform.CompileStatic
-import rx.Observable
-import rx.Subscriber
+import io.reactivex.Emitter
 
 import java.util.concurrent.TimeUnit
 
@@ -21,7 +20,7 @@ class NewObservableResult<T> extends TimeoutResult {
         super(timeout, unit)
         this.callable = callable
         def parameterTypes = this.callable.parameterTypes
-        boolean isSubscriber = parameterTypes.length == 1 && Subscriber.isAssignableFrom(parameterTypes[0])
+        boolean isSubscriber = parameterTypes.length == 1 && Emitter.isAssignableFrom(parameterTypes[0])
         if(!isSubscriber) {
             throw new IllegalArgumentException("Passed closure must accept argument of type rx.Subscriber")
         }
