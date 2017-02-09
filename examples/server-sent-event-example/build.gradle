@@ -5,8 +5,8 @@ buildscript {
     }
     dependencies {
         classpath "org.grails:grails-gradle-plugin:$grailsVersion"
-        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:2.8.2"
-        classpath "org.grails.plugins:hibernate5:6.0.0.M2"
+        classpath "com.bertramlabs.plugins:asset-pipeline-gradle:2.11.6"
+        classpath "org.grails.plugins:hibernate5:6.0.6"
     }
 }
 
@@ -44,11 +44,12 @@ dependencies {
     compile "org.grails.plugins:scaffolding"
     compile "org.grails.plugins:rx-mongodb"
     compile "org.grails.plugins:rx-gorm-rest-client:1.0.0.M1"
-    compile "org.grails.plugins:rxjava:1.0.0-SNAPSHOT"
+    compile project(":rxjava")
+    compile 'org.grails.plugins:quartz:2.0.9'
 
     console "org.grails:grails-console"
     profile "org.grails.profiles:web"
-    runtime "com.bertramlabs.plugins:asset-pipeline-grails:2.8.2"
+    runtime "com.bertramlabs.plugins:asset-pipeline-grails:2.11.6"
     runtime "com.h2database:h2"
     testCompile "org.grails:grails-plugin-testing"
     testCompile "org.grails.plugins:geb"

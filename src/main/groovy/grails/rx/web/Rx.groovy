@@ -5,6 +5,8 @@ import grails.web.databinding.DataBindingUtils
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import io.reactivex.Emitter
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
@@ -14,6 +16,7 @@ import org.grails.plugins.rx.web.ObservableResult
 import org.grails.plugins.rx.web.StreamingNewObservableResult
 import org.grails.plugins.rx.web.StreamingObservableResult
 import org.grails.plugins.rx.web.result.*
+import org.grails.plugins.rx.web.sse.SseResult
 import org.grails.web.converters.Converter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.web.context.request.RequestContextHolder
@@ -127,6 +130,73 @@ class Rx {
      */
     static RxResult<Converter> render(Converter converter) {
         return new RenderConverterResult(converter)
+    }
+
+    /**
+     * Creates a Server Sent Events event for the given {@link Writable}.  Optional named
+     * params can be used to set a `comment`, `id` and `event` for the SSE event.
+     *
+     * @param sseOptions Optional named parameters
+     * @param writable The writable to write as the event data
+     * @return The SSE event
+     */
+    static SseResult event(Map sseOptions, Writable writable) {
+        def result = sseOptions as SseResult
+        result.data = writable
+        return result
+    }
+
+    /**
+     * Creates a Server Sent Events event for the given {@link Converter}.
+     *
+     * @param sseOptions Optional named parameters
+     * @param converter The converter
+     * @return The SSE event
+     */
+    static SseResult event(Map sseOptions, Converter converter) {
+        event(sseOptions, { Writer out ->
+            converter.render(out)
+            out
+        } as Writable
+        )
+    }
+
+    /**
+     * Creates a Server Sent Events event for the given {@link GString}.
+     *
+     * @param sseOptions Optional named parameters
+     * @param gString The String
+     * @return The SSE event
+     */
+    static SseResult event(Map sseOptions, GString gString) {
+        event(sseOptions, (Writable)gString)
+    }
+
+    /**
+     * Creates a Server Sent Events event for the given {@link CharSequence}.
+     *
+     * @param sseOptions Optional named parameters
+     * @param charSequence The String
+     * @return The SSE event
+     */
+    static SseResult event(Map sseOptions, CharSequence charSequence) {
+        event(sseOptions, { Writer out ->
+            out.write(charSequence.toString())
+            out
+        } as Writable
+        )
+    }
+
+    /**
+     * Creates a Server Sent Events event using the given {@link Closure} to generate the data.  The closure
+     * will receive a writer as the only parameter.
+     *
+     * @param sseOptions Optional named parameters
+     * @param closure The closure
+     * @return The SSE event
+     */
+    static SseResult event(Map sseOptions, @ClosureParams(value=SimpleType,options=['java.io.Writer']) Closure closure) {
+        event(sseOptions, (Writable)closure.asWritable())
     }
 
     /**

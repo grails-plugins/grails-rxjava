@@ -1,0 +1,2 @@
+include ":rxjava"
+project(":rxjava").projectDir = file("../../")
