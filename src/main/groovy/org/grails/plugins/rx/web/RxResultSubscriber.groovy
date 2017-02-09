@@ -10,6 +10,7 @@ import groovy.util.logging.Slf4j
 import org.grails.plugins.rx.web.result.ForwardResult
 import org.grails.plugins.rx.web.result.RxCompletionStrategy
 import org.grails.plugins.rx.web.result.RxResult
+import org.grails.plugins.rx.web.sse.SseResult
 import org.grails.plugins.web.async.GrailsAsyncContext
 import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -153,6 +154,17 @@ class RxResultSubscriber extends Subscriber implements AsyncListener {
                 response.flushBuffer()
 
             }
+        }
+        else if (o instanceof SseResult) {
+            SseResult sseResult = (SseResult) o
+            def response = asyncContext.response
+            def writer = response.writer
+            if (!sseResult.event && serverSendEventName) {
+                sseResult.event = serverSendEventName
+            }
+            sseResult.writeTo(writer)
+            completionStrategy = RxCompletionStrategy.COMPLETE
+            response.flushBuffer()
         }
         else if(o instanceof HttpStatus) {
             // if the item emitted is an HttpStatus object set the status
