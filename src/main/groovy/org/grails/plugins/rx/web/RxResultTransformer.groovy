@@ -73,7 +73,7 @@ class RxResultTransformer implements ActionResultTransformer {
             // Create the Async web request and register it with the WebAsyncManager so Spring is aware
             WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
 
-            AsyncWebRequest asyncWebRequest = new AsyncGrailsWebRequest(
+            AsyncGrailsWebRequest asyncWebRequest = new AsyncGrailsWebRequest(
                     request,
                     response,
                     webRequest.servletContext)
@@ -121,15 +121,15 @@ class RxResultTransformer implements ActionResultTransformer {
                 }
             }
             else {
-                NewObservableResult newObservableResult = (NewObservableResult)actionResult
-                Observable newObservable = Observable.create( { Subscriber newSub ->
-                    asyncContext.start {
+                asyncContext.start {
+                    NewObservableResult newObservableResult = (NewObservableResult)actionResult
+                    Observable newObservable = Observable.create( { Subscriber newSub ->
                         Closure callable = newObservableResult.callable
                         callable.setDelegate(newSub)
                         callable.call(newSub)
-                    }
-                } as Observable.OnSubscribe)
-                newObservable.subscribe(subscriber)
+                    } as Observable.OnSubscribe)
+                    newObservable.subscribe(subscriber)
+                }
             }
             // return null indicating that the request thread should be returned to the thread pool
             // async request processing will take over
