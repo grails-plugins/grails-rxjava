@@ -18,15 +18,14 @@ class TickTockController implements RxController {
 
     def index() {
         rx.stream { Subscriber emitter ->
-            for(i in (0..5)) {
-                if(i % 2 == 0) {
+            for (i in (0..5)) {
+                if (i % 2 == 0) {
                     emitter.onNext(
-                        rx.render("Tick")
+                            rx.render("Tick")
                     )
-                }
-                else {
+                } else {
                     emitter.onNext(
-                        rx.render("Tock")
+                            rx.render("Tock")
                     )
 
                 }
@@ -42,13 +41,12 @@ class TickTockController implements RxController {
         log.info("Last Event ID: $lastId")
         rx.stream { Subscriber emitter ->
             log.info("SSE Thread ${Thread.currentThread().name}")
-            for(i in (startId..(startId+9))) {
-                if(i % 2 == 0) {
+            for (i in (startId..(startId + 9))) {
+                if (i % 2 == 0) {
                     emitter.onNext(
                             rx.event("Tick\n$i", id: i, event: 'tick', comment: 'tick')
                     )
-                }
-                else {
+                } else {
                     emitter.onNext(
                             rx.event("Tock\n$i", id: i, event: 'tock', comment: 'tock')
                     )
@@ -64,23 +62,23 @@ class TickTockController implements RxController {
         def lastId = request.getHeader('Last-Event-ID') as Integer
         def startId = lastId ? lastId + 1 : 0
         rx.stream(
-                Observable
-                        .interval(1, TimeUnit.SECONDS)
-                        .doOnSubscribe { log.info("Observable Subscribe Thread ${Thread.currentThread().name}") }
-                        .doOnNext { log.info("Observable Thread ${Thread.currentThread().name}") }
-                        .map {
-                            def id = it + startId
-                            def json = [type: 'observable', num: id] as JSON
+            Observable
+                    .interval(1, TimeUnit.SECONDS)
+                    .doOnSubscribe { log.info("Observable Subscribe Thread ${Thread.currentThread().name}") }
+                    .doOnNext { log.info("Observable Thread ${Thread.currentThread().name}") }
+                    .map {
+                def id = it + startId
+                def json = [type: 'observable', num: id] as JSON
 
-                            rx.event(new Writable() {
-                                @Override
-                                Writer writeTo(Writer writer) throws IOException {
-                                    json.render(writer)
-                                    return writer
-                                }
-                            }, id: id, comment: 'hello')
-                        }
-                        .take(10),
+                rx.event(new Writable() {
+                    @Override
+                    Writer writeTo(Writer writer) throws IOException {
+                        json.render(writer)
+                        return writer
+                    }
+                }, id: id, comment: 'hello')
+            }
+            .take(10)
         )
     }
 
@@ -95,21 +93,21 @@ class TickTockController implements RxController {
 
     def quartz() {
         rx.stream(
-                publishedObservable
-                        .doOnSubscribe { log.info("Quartz Subscribe Thread ${Thread.currentThread().name}") }
-                        .doOnError { log.info("Quartz thread error") }
-                        .map {
-                            log.info("Quartz Thread ${Thread.currentThread().name}")
+            publishedObservable
+                    .doOnSubscribe { log.info("Quartz Subscribe Thread ${Thread.currentThread().name}") }
+                    .doOnError { log.info("Quartz thread error") }
+                    .map {
+                log.info("Quartz Thread ${Thread.currentThread().name}")
 
-                            def json = [type: 'quartz', num: it as int] as JSON
-                            rx.event(new Writable() {
-                                @Override
-                                Writer writeTo(Writer writer) throws IOException {
-                                    json.render(writer)
-                                    return writer
-                                }
-                            }, comment: 'hello')
-                        }
+                def json = [type: 'quartz', num: it as int] as JSON
+                rx.event(new Writable() {
+                    @Override
+                    Writer writeTo(Writer writer) throws IOException {
+                        json.render(writer)
+                        return writer
+                    }
+                }, comment: 'hello')
+            }
         )
     }
 }
