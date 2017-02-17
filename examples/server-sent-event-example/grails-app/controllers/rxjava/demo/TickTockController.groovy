@@ -2,14 +2,12 @@ package rxjava.demo
 
 import grails.converters.JSON
 import grails.rx.web.*
-import io.reactivex.Emitter
-import io.reactivex.Observable
-import io.reactivex.schedulers.Schedulers
-import io.reactivex.subjects.PublishSubject
-import io.reactivex.subjects.Subject
 import reactor.spring.context.annotation.Consumer
 import reactor.spring.context.annotation.Selector
-
+import rx.Observable
+import rx.Subscriber
+import rx.subjects.*
+import rx.schedulers.Schedulers
 import java.util.concurrent.TimeUnit
 
 /**
@@ -19,7 +17,7 @@ import java.util.concurrent.TimeUnit
 class TickTockController implements RxController {
 
     def index() {
-        rx.stream { Emitter emitter ->
+        rx.stream { Subscriber emitter ->
             for(i in (0..5)) {
                 if(i % 2 == 0) {
                     emitter.onNext(
@@ -34,7 +32,7 @@ class TickTockController implements RxController {
                 }
                 sleep 1000
             }
-            emitter.onComplete()
+            emitter.onCompleted()
         }
     }
 
@@ -42,7 +40,7 @@ class TickTockController implements RxController {
         def lastId = request.getHeader('Last-Event-ID') as Integer
         def startId = lastId ? lastId + 1 : 0
         log.info("Last Event ID: $lastId")
-        rx.stream { Emitter emitter ->
+        rx.stream { Subscriber emitter ->
             log.info("SSE Thread ${Thread.currentThread().name}")
             for(i in (startId..(startId+9))) {
                 if(i % 2 == 0) {
@@ -58,7 +56,7 @@ class TickTockController implements RxController {
                 }
                 sleep 1000
             }
-            emitter.onComplete()
+            emitter.onCompleted()
         }
     }
 
@@ -72,7 +70,15 @@ class TickTockController implements RxController {
                         .doOnNext { log.info("Observable Thread ${Thread.currentThread().name}") }
                         .map {
                             def id = it + startId
-                            rx.event([type: 'observable', num: id] as JSON, id: id, comment: 'hello')
+                            def json = [type: 'observable', num: id] as JSON
+
+                            rx.event(new Writable() {
+                                @Override
+                                Writer writeTo(Writer writer) throws IOException {
+                                    json.render(writer)
+                                    return writer
+                                }
+                            }, id: id, comment: 'hello')
                         }
                         .take(10),
         )
@@ -94,7 +100,15 @@ class TickTockController implements RxController {
                         .doOnError { log.info("Quartz thread error") }
                         .map {
                             log.info("Quartz Thread ${Thread.currentThread().name}")
-                            rx.event([type: 'quartz', num: it as int] as JSON, comment: 'hello')
+
+                            def json = [type: 'quartz', num: it as int] as JSON
+                            rx.event(new Writable() {
+                                @Override
+                                Writer writeTo(Writer writer) throws IOException {
+                                    json.render(writer)
+                                    return writer
+                                }
+                            }, comment: 'hello')
                         }
         )
     }
