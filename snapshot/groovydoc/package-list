@@ -5,3 +5,4 @@ org.grails.plugins.rx
 org.grails.plugins.rx.renderer
 org.grails.plugins.rx.web
 org.grails.plugins.rx.web.result
+org.grails.plugins.rx.web.sse
