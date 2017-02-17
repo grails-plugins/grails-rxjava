@@ -141,8 +141,14 @@ class EventController implements Controller, RestResponder{
             for(i in 0..3) {
                 def foo =  """bar $i
 bar $i"""
+                def json = [foo: foo, 'baz': 3] as JSON
                 subscriber.onNext(
-                        rx.event([foo: foo, 'baz': 3] as JSON, id: "$i", retry: 1000)
+                        rx.event(new Writable() {
+                            @Override
+                            Writer writeTo(Writer writer) throws IOException {
+                                json.render(writer)
+                            }
+                        }, id: "$i", retry: 1000)
                 )
             }
             subscriber.onComplete()
