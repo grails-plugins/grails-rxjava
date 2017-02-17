@@ -113,15 +113,6 @@ class RxHelper {
         Rx.render(arguments, writable)
     }
 
-    /**
-     * Executes render for the given converter
-     *
-     * @param converter The converter
-     * @return the rx result
-     */
-    RxResult<Converter> render(Converter converter) {
-        Rx.render(converter)
-    }
 
     /**
      * Create a Server Sent Event without data
@@ -151,27 +142,6 @@ class RxHelper {
      * @return The SSE Event
      */
     SseResult event(Writable writable) {
-        Rx.event([:], writable)
-    }
-
-    /**
-     * Use a converter to create a Server Sent Event
-     *
-     * @param sseOptions optional Server Sent Event arguments (comment, id, event, retry)
-     * @param converter The converter
-     * @return The SSE Event
-     */
-    SseResult event(Map sseOptions, Converter converter) {
-        Rx.event(sseOptions, converter)
-    }
-
-    /**
-     * Use a converter to create a Server Sent Event
-     *
-     * @param converter The converter
-     * @return The SSE Event
-     */
-    SseResult event(Converter writable) {
         Rx.event([:], writable)
     }
 
