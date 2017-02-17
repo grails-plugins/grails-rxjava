@@ -75,3 +75,41 @@ function tickTock() {
     }, false);
 }
 ----
+
+In addition for more complex event types you can use the `rx.event` method:
+
+[source,groovy]
+----
+    rx.stream { Subscriber subscriber ->
+       for(i in (0..5)) {
+           if(i % 2 == 0) {
+               subscriber.onNext(
+                   rx.event("Tick", event:"Event $i", id:"$id", comment:"Tick Event") <1>
+               )
+           }
+           else {
+                ...
+           }
+       }
+       ...
+   }
+----
+
+<1> The `event` method can be used to customize the Server Sent event properties and rendering multi-line data.
+
+The `event` method also accepts `Writable` instances, which can be useful in combination with builders:
+
+[source,groovy]
+----
+Writable writable = new Writable() {
+   @Override
+    Writer writeTo(Writer writer) throws IOException {
+        new StreamingJsonBuilder(writer).call {
+            tick "Tock"
+        }
+        return writer
+    }
+}
+rx.event(writable, event:"Event $i", id:"$id", comment:"Tick Event")
+
+----
