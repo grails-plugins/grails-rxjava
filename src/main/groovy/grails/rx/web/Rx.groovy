@@ -13,7 +13,6 @@ import org.grails.plugins.rx.web.StreamingNewObservableResult
 import org.grails.plugins.rx.web.StreamingObservableResult
 import org.grails.plugins.rx.web.result.*
 import org.grails.plugins.rx.web.sse.SseResult
-import org.grails.web.converters.Converter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.WebAsyncManager
@@ -121,16 +120,6 @@ class Rx {
     }
 
     /**
-     * Executes render for the given converter
-     *
-     * @param converter The converter
-     * @return the rx result
-     */
-    static RxResult<Converter> render(Converter converter) {
-        return new RenderConverterResult(converter)
-    }
-
-    /**
      * Creates a Server Sent Events event for the given {@link Writable}.  Optional named
      * params can be used to set a `comment`, `id` and `event` for the SSE event.
      *
@@ -144,20 +133,6 @@ class Rx {
         return result
     }
 
-    /**
-     * Creates a Server Sent Events event for the given {@link Converter}.
-     *
-     * @param sseOptions Optional named parameters
-     * @param converter The converter
-     * @return The SSE event
-     */
-    static SseResult event(Map sseOptions, Converter converter) {
-        event(sseOptions, { Writer out ->
-            converter.render(out)
-            out
-        } as Writable
-        )
-    }
 
     /**
      * Creates a Server Sent Events event for the given {@link GString}.
