@@ -14,6 +14,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
+import rx.Emitter
 import rx.Subscriber
 import spock.lang.Specification
 import static grails.rx.web.Rx.*
@@ -119,35 +120,35 @@ data: {"foo":"bar 3"}
 }
 class NewObservableController implements Controller, RestResponder{
     def index() {
-        create { Subscriber subscriber ->
-            subscriber.onNext(
+        create { Emitter emitter ->
+            emitter.onNext(
                 render("Foo")
             )
-            subscriber.onCompleted()
+            emitter.onCompleted()
         }
     }
 
     def stream() {
-        stream { Subscriber subscriber ->
+        stream { Emitter emittter ->
             for(i in 0..3) {
-                subscriber.onNext(
+                emittter.onNext(
                         render("Foo $i")
                 )
             }
-            subscriber.onCompleted()
+            emittter.onCompleted()
         }
     }
 
     def streamJson() {
-        stream { Subscriber subscriber ->
+        stream { Emitter emitter ->
             for(i in 0..3) {
-                subscriber.onNext(
+                emitter.onNext(
                         render(contentType:"application/json") {
                             foo "bar $i"
                         }
                 )
             }
-            subscriber.onCompleted()
+            emitter.onCompleted()
         }
     }
 }

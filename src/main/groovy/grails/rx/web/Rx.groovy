@@ -1,6 +1,5 @@
 package grails.rx.web
 
-import grails.async.Promises
 import grails.web.databinding.DataBindingUtils
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import groovy.transform.CompileDynamic
@@ -17,10 +16,11 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
+import rx.Emitter
 import rx.Observable
 import rx.Subscriber
+import rx.functions.Action1
 
-import javax.servlet.ServletInputStream
 import javax.servlet.http.HttpServletRequest
 import java.util.concurrent.TimeUnit
 
@@ -223,36 +223,36 @@ class Rx {
      */
     @CompileDynamic
     static Observable bindData(Object object, Object bindingSource, Map arguments = Collections.emptyMap(), String filter = null) {
-        Observable.create( { Subscriber<? super Object> subscriber ->
-                subscriber.onStart()
-                Promises.task {
-                    if(bindingSource instanceof HttpServletRequest) {
-                        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(bindingSource)
-                        // horrible hack, find better solution
-                        GrailsWebRequest webRequest = asyncManager != null ? asyncManager.@asyncWebRequest : null
-                        if(webRequest != null) {
-                            RequestContextHolder.setRequestAttributes(webRequest)
-                            try {
-                                List includeList = convertToListIfCharSequence(arguments?.include)
-                                List excludeList = convertToListIfCharSequence(arguments?.exclude)
+        Observable.create( { Emitter<? super Object> emitter ->
+            try {
+                if(bindingSource instanceof HttpServletRequest) {
+                    WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(bindingSource)
+                    // horrible hack, find better solution
+                    GrailsWebRequest webRequest = asyncManager != null ? asyncManager.@asyncWebRequest : null
+                    if(webRequest != null) {
+                        RequestContextHolder.setRequestAttributes(webRequest)
+                        try {
+                            List includeList = convertToListIfCharSequence(arguments?.include)
+                            List excludeList = convertToListIfCharSequence(arguments?.exclude)
 
-                                DataBindingUtils.bindObjectToInstance(object, bindingSource, includeList, excludeList, filter)
-                            } finally {
-                                RequestContextHolder.setRequestAttributes(null)
-                            }
-                        }
-                        else {
-                            object.properties = bindingSource
+                            DataBindingUtils.bindObjectToInstance(object, bindingSource, includeList, excludeList, filter)
+                        } finally {
+                            RequestContextHolder.setRequestAttributes(null)
                         }
                     }
                     else {
                         object.properties = bindingSource
                     }
-                    subscriber.onNext(object)
-                    subscriber.onCompleted()
-
                 }
-        } as Observable.OnSubscribe<Object>)
+                else {
+                    object.properties = bindingSource
+                }
+                emitter.onNext(object)
+                emitter.onCompleted()
+            } catch (Throwable e) {
+                emitter.onError(e)
+            }
+        } as Action1<Emitter<InputStream>>, Emitter.BackpressureMode.NONE)
     }
 
 
@@ -264,24 +264,28 @@ class Rx {
      * @return An observable
      */
     static Observable<InputStream> fromBody(HttpServletRequest request) {
-        Observable.create( { Subscriber<InputStream> subscriber ->
-            subscriber.onStart()
-            Promises.task {
-                InputStream inputStream = null
-                try {
-                    try {
-                        inputStream = request.getInputStream()
-                        subscriber.onNext(inputStream)
-                    } catch (Throwable e) {
-                        subscriber.onError(e)
-                    }
-                } finally {
-                    subscriber.onCompleted()
-                    inputStream?.close()
-                }
-
+        Observable.create( { Emitter<InputStream> subscriber ->
+            WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
+            if(!asyncManager.isConcurrentHandlingStarted()) {
+                throw new IllegalStateException("Servlet async processing must have been started to use fromBody(..)")
             }
-        } as Observable.OnSubscribe<InputStream>)
+            InputStream inputStream = null
+            try {
+                try {
+                    inputStream = request.getInputStream()
+                    subscriber.onNext(inputStream)
+                    subscriber.onCompleted()
+                } catch (Throwable e) {
+                    subscriber.onError(e)
+                }
+            } finally {
+                try {
+                    inputStream?.close()
+                } catch (Throwable e) {
+                    // ignore
+                }
+            }
+        } as Action1<Emitter<InputStream>>, Emitter.BackpressureMode.NONE)
     }
 
     /**

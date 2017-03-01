@@ -15,8 +15,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.context.request.async.AsyncWebRequest
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
+import rx.Emitter
 import rx.Observable
 import rx.Subscriber
+import rx.functions.Action1
+import rx.schedulers.Schedulers
 
 import javax.servlet.AsyncContext
 import javax.servlet.ServletResponse
@@ -117,18 +120,22 @@ class RxResultTransformer implements ActionResultTransformer {
 
                 // in a separate thread register the observable subscriber
                 asyncContext.start {
-                    observable.subscribe(subscriber)
+                    observable.observeOn(Schedulers.immediate()) // run on the async servlet thread
+                              .subscribe(subscriber)
                 }
             }
             else {
                 asyncContext.start {
                     NewObservableResult newObservableResult = (NewObservableResult)actionResult
-                    Observable newObservable = Observable.create( { Subscriber newSub ->
+
+                    Observable newObservable = Observable.create( { Emitter newSub ->
                         Closure callable = newObservableResult.callable
                         callable.setDelegate(newSub)
                         callable.call(newSub)
-                    } as Observable.OnSubscribe)
-                    newObservable.subscribe(subscriber)
+                    } as Action1<Emitter>, Emitter.BackpressureMode.NONE)
+                    newObservable
+                        .observeOn(Schedulers.immediate()) // run on the async servlet thread
+                        .subscribe(subscriber)
                 }
             }
             // return null indicating that the request thread should be returned to the thread pool

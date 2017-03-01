@@ -13,6 +13,8 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
+import rx.Emitter
+import rx.Observer
 import rx.Subscriber
 import spock.lang.Specification
 
@@ -126,23 +128,23 @@ class EventController implements Controller, RestResponder{
     RxHelper rx = new RxHelper()
 
     def stream() {
-        rx.stream { Subscriber subscriber ->
+        rx.stream { Observer observer ->
             for(i in 0..3) {
-                subscriber.onNext(
+                observer.onNext(
                         rx.event("Foo $i\nFoo\nBar\nBaz", event: "Event $i", comment: 'potato', id: "$i")
                 )
             }
-            subscriber.onCompleted()
+            observer.onCompleted()
         }
     }
 
     def streamJson() {
-        rx.stream { Subscriber subscriber ->
+        rx.stream { Emitter emitter ->
             for(i in 0..3) {
                 def foo =  """bar $i
 bar $i"""
                 def json = [foo: foo, 'baz': 3] as JSON
-                subscriber.onNext(
+                emitter.onNext(
                         rx.event(new Writable() {
                             @Override
                             Writer writeTo(Writer writer) throws IOException {
@@ -151,7 +153,7 @@ bar $i"""
                         }, id: "$i", retry: 1000)
                 )
             }
-            subscriber.onCompleted()
+            emitter.onCompleted()
         }
     }
 }

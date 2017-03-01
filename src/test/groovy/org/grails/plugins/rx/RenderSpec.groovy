@@ -131,10 +131,44 @@ class RenderSpec extends Specification {
         RequestContextHolder.setRequestAttributes(null)
 
     }
+
+
+    void "Test render a from body async"() {
+        setup:
+        GrailsWebRequest webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        MockHttpServletRequest request = webRequest.getCurrentRequest()
+        request.setAsyncSupported(true)
+        RenderController controller = new RenderController()
+        request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
+        request.setContent("Foo".bytes)
+        when:"A controller uses the render method and a string"
+        Observable observable = controller.renderFromBody()
+
+        then:
+        observable != null
+
+        when:"The observable is transformed"
+        RxResultTransformer transformer = new RxResultTransformer()
+        def result = transformer.transformActionResult(webRequest, "renderText", observable)
+        then:"null is returned"
+        result == null
+        webRequest.response.contentAsString == "Foo"
+
+        cleanup:
+        ConvertersConfigurationHolder.clear()
+        RequestContextHolder.setRequestAttributes(null)
+
+    }
 }
 
 class RenderController implements Controller {
 
+    def renderFromBody() {
+        fromBody(request)
+            .map { InputStream input ->
+            render(input.text)
+        }
+    }
     def renderView() {
         Observable.just("Foo")
                 .map { String result ->

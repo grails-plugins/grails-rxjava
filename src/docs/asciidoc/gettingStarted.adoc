@@ -16,7 +16,7 @@ You then may want to include an implementation of RxGORM, for the examples in th
 ----
 dependencies {
     ...
-    compile 'org.grails.plugins:rx-mongodb:6.0.0.M2'
+    compile 'org.grails.plugins:rx-mongodb:6.0.7'
 }
 ----
 

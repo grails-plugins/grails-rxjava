@@ -8,15 +8,15 @@ For example:
 ----
 def index() {
 
-    rx.stream { Subscriber subscriber -> <1>
+    rx.stream { rx.Observer observer -> <1>
        for(i in (0..5)) {
            if(i % 2 == 0) {
-               subscriber.onNext(
+               observer.onNext(
                    rx.render("Tick") <2>
                )
            }
            else {
-               subscriber.onNext(
+               observer.onNext(
                    rx.render("Tock")
                )
 
@@ -28,7 +28,7 @@ def index() {
 }
 ----
 
-<1> Call the `stream` method passing a closure that accepts an `rx.Subscriber` to start sending events
+<1> Call the `stream` method passing a closure that accepts an `rx.Observer` to start sending events
 <2> Emit a one or many items using `onNext`
 <3> Call `sleep` to simulate a slow request
 <4> Call `onCompleted` to complete the request
@@ -60,7 +60,7 @@ If you wish to send a particular named event you can use the name argument of th
 
 [source,groovy]
 ----
-stream "ticktock", { Subscriber subscriber ->
+stream "ticktock", { rx.Observer observer ->
 ----
 
 And then attach an event listener for only that event on the client:
@@ -80,10 +80,10 @@ In addition for more complex event types you can use the `rx.event` method:
 
 [source,groovy]
 ----
-    rx.stream { Subscriber subscriber ->
+    rx.stream { rx.Observer observer ->
        for(i in (0..5)) {
            if(i % 2 == 0) {
-               subscriber.onNext(
+               observer.onNext(
                    rx.event("Tick", event:"Event $i", id:"$id", comment:"Tick Event") <1>
                )
            }
