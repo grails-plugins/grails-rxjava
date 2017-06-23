@@ -562,9 +562,33 @@ table.CodeRay td.code>pre{padding:0}
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="groovy">dependencies {
     ...
-    compile 'org.grails.plugins:rxjava:2.0.0.BUILD-SNAPSHOT'
+    compile 'org.grails.plugins:rxjava"
 }</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>If you wish to use RxJava 2.x then you can declare the <code>rxjava2</code> dependency:</p>
+</div>
+<div class="listingblock">
+<div class="title">build.gradle</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="groovy">dependencies {
+    ...
+    compile 'org.grails.plugins:rxjava2:2.0.1-SNAPSHOT'
+}</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+RxGORM does not currently support RxJava 2.x due to the fact that the MongoDB driver only supports RxJava 1.x. However the remaining features such as server sent events work with both RxJava and RxJava 2.x.
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>You then may want to include an implementation of RxGORM, for the examples in this documentation we will use RxGORM for MongoDB:</p>
@@ -574,7 +598,7 @@ table.CodeRay td.code>pre{padding:0}
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="groovy">dependencies {
     ...
-    compile 'org.grails.plugins:rx-mongodb:6.0.0.M2'
+    compile 'org.grails.plugins:rx-mongodb'
 }</code></pre>
 </div>
 </div>
@@ -955,7 +979,7 @@ The <code>EventSource</code> object is supported in <a href="http://caniuse.com/
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-02-17 11:46:52 UTC
+Last updated 2017-06-23 14:33:26 UTC
 </div>
 </div>
 </body>
