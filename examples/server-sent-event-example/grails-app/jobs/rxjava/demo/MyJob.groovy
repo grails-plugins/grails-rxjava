@@ -1,8 +1,8 @@
 package rxjava.demo
 
-import grails.events.Events
+import grails.events.*
 
-class MyJob implements Events {
+class MyJob implements EventPublisher {
     static triggers = {
         simple name: 'mySimpleTrigger', startDelay: 1000, repeatInterval: 1000
     }
@@ -11,11 +11,10 @@ class MyJob implements Events {
 
     static int i = 0
 
-    static final String EVENT_NAME = 'MyJob.event'
+    static final String EVENT_NAME = "MyJob"
 
     def execute(){
         log.trace('MyJob.execute()')
-
-        notify EVENT_NAME, "${i++}"
+        notify(EVENT_NAME, "${i++}")
     }
 }

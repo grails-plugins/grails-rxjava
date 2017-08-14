@@ -7,15 +7,12 @@ import io.reactivex.Observable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
 import io.reactivex.subjects.Subject
-import reactor.spring.context.annotation.Consumer
-import reactor.spring.context.annotation.Selector
-
+import grails.events.annotation.*
 import java.util.concurrent.TimeUnit
 
 /**
  * Created by graemerocher on 28/07/2016.
  */
-@Consumer
 class TickTockController implements RxController {
 
     def index() {
@@ -81,8 +78,8 @@ class TickTockController implements RxController {
     Subject subject = PublishSubject.create()
     Observable publishedObservable = subject.publish().autoConnect().observeOn(Schedulers.io())
 
-    @Selector('MyJob.event')
-    void myEventListener(Object data) {
+    @Subscriber("MyJob")
+    void myEventListener(int data) {
         log.info("myEvent listener Thread ${Thread.currentThread().name}")
         subject.onNext(data)
     }
