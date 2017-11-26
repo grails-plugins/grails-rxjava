@@ -251,7 +251,7 @@ class RxResultSubscriber implements AsyncListener, Observer {
     @Override
     void onError(Throwable e) {
         synchronized (asyncContext) {
-            if(!asyncComplete && !asyncContext.response.isCommitted()) {
+            if(!asyncComplete && !asyncContext.response.isCommitted() && e != null) {
                 // if an error occurred and the response has not yet been commited try and handle it
                 def httpServletResponse = (HttpServletResponse) asyncContext.response
                 // first check if the exception resolver and resolve a model and view
